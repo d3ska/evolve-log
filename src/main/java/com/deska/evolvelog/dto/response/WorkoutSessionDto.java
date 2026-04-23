@@ -1,0 +1,41 @@
+package com.deska.evolvelog.dto.response;
+
+import com.deska.evolvelog.domain.WorkoutSession;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public record WorkoutSessionDto(
+        UUID id,
+        LocalDateTime date,
+        Integer durationMinutes,
+        String notes,
+        UUID trainingPlanId,
+        List<ExerciseDto> exercises,
+        LocalDateTime createdAt
+) {
+    public static WorkoutSessionDto from(WorkoutSession session) {
+        return new WorkoutSessionDto(
+                session.getId(),
+                session.getDate(),
+                session.getDurationMinutes(),
+                session.getNotes(),
+                session.getTrainingPlan() != null ? session.getTrainingPlan().getId() : null,
+                session.getExercises().stream().map(ExerciseDto::from).toList(),
+                session.getCreatedAt()
+        );
+    }
+
+    public static WorkoutSessionDto summary(WorkoutSession session) {
+        return new WorkoutSessionDto(
+                session.getId(),
+                session.getDate(),
+                session.getDurationMinutes(),
+                session.getNotes(),
+                session.getTrainingPlan() != null ? session.getTrainingPlan().getId() : null,
+                List.of(),
+                session.getCreatedAt()
+        );
+    }
+}

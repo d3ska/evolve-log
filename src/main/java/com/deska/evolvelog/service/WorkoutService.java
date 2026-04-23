@@ -1,0 +1,155 @@
+package com.deska.evolvelog.service;
+
+import com.deska.evolvelog.domain.Exercise;
+import com.deska.evolvelog.domain.TrainingPlan;
+import com.deska.evolvelog.domain.User;
+import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.dto.request.CreateExerciseRequest;
+import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
+import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
+import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
+import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.repository.ExerciseRepository;
+import com.deska.evolvelog.repository.TrainingPlanRepository;
+import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class WorkoutService {
+
+    private final WorkoutSessionRepository sessionRepository;
+    private final ExerciseRepository exerciseRepository;
+    private final TrainingPlanRepository trainingPlanRepository;
+
+    public WorkoutService(WorkoutSessionRepository sessionRepository,
+                          ExerciseRepository exerciseRepository,
+                          TrainingPlanRepository trainingPlanRepository) {
+        this.sessionRepository = sessionRepository;
+        this.exerciseRepository = exerciseRepository;
+        this.trainingPlanRepository = trainingPlanRepository;
+    }
+
+    @Transactional
+    public WorkoutSession create(User user, CreateWorkoutSessionRequest request) {
+        TrainingPlan plan = resolveTrainingPlan(request.trainingPlanId(), user.getId());
+
+        WorkoutSession session = WorkoutSession.builder()
+                .user(user)
+                .date(request.date())
+                .durationMinutes(request.durationMinutes())
+                .notes(request.notes())
+                .trainingPlan(plan)
+                .build();
+
+        if (request.exercises() != null && !request.exercises().isEmpty()) {
+            List<Exercise> exercises = buildExercises(request.exercises(), session);
+            session.getExercises().addAll(exercises);
+        }
+
+        return sessionRepository.save(session);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSession> findAll(UUID userId, int page, int size) {
+        return sessionRepository.findByUserIdOrderByDateDesc(userId, PageRequest.of(page, size));
+    }
+
+    @Transactional(readOnly = true)
+    public WorkoutSession findById(UUID id, UUID userId) {
+        return sessionRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", id));
+    }
+
+    @Transactional
+    public WorkoutSession update(UUID id, UUID userId, UpdateWorkoutSessionRequest request) {
+        WorkoutSession session = findById(id, userId);
+        if (request.date() != null) session.setDate(request.date());
+        if (request.durationMinutes() != null) session.setDurationMinutes(request.durationMinutes());
+        if (request.notes() != null) session.setNotes(request.notes());
+        if (request.trainingPlanId() != null) {
+            session.setTrainingPlan(resolveTrainingPlan(request.trainingPlanId(), userId));
+        }
+        return sessionRepository.save(session);
+    }
+
+    @Transactional
+    public void delete(UUID id, UUID userId) {
+        WorkoutSession session = findById(id, userId);
+        sessionRepository.delete(session);
+    }
+
+    @Transactional
+    public Exercise addExercise(UUID sessionId, UUID userId, CreateExerciseRequest request) {
+        WorkoutSession session = findById(sessionId, userId);
+        int position = request.position() != null
+                ? request.position()
+                : exerciseRepository.countByWorkoutSessionId(sessionId);
+
+        Exercise exercise = Exercise.builder()
+                .workoutSession(session)
+                .name(request.name())
+                .sets(request.sets())
+                .reps(request.reps())
+                .weightKg(request.weightKg())
+                .notes(request.notes())
+                .position(position)
+                .build();
+
+        return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public Exercise updateExercise(UUID sessionId, UUID exerciseId, UUID userId, UpdateExerciseRequest request) {
+        // Verify session ownership
+        findById(sessionId, userId);
+        Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
+
+        if (request.name() != null) exercise.setName(request.name());
+        if (request.sets() != null) exercise.setSets(request.sets());
+        if (request.reps() != null) exercise.setReps(request.reps());
+        if (request.weightKg() != null) exercise.setWeightKg(request.weightKg());
+        if (request.notes() != null) exercise.setNotes(request.notes());
+        if (request.position() != null) exercise.setPosition(request.position());
+
+        return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public void deleteExercise(UUID sessionId, UUID exerciseId, UUID userId) {
+        findById(sessionId, userId);
+        Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
+        exerciseRepository.delete(exercise);
+    }
+
+    private TrainingPlan resolveTrainingPlan(UUID planId, UUID userId) {
+        if (planId == null) return null;
+        return trainingPlanRepository.findByIdAndUserId(planId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("TrainingPlan", planId));
+    }
+
+    private List<Exercise> buildExercises(List<CreateExerciseRequest> requests, WorkoutSession session) {
+        List<Exercise> exercises = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            CreateExerciseRequest req = requests.get(i);
+            exercises.add(Exercise.builder()
+                    .workoutSession(session)
+                    .name(req.name())
+                    .sets(req.sets())
+                    .reps(req.reps())
+                    .weightKg(req.weightKg())
+                    .notes(req.notes())
+                    .position(req.position() != null ? req.position() : i)
+                    .build());
+        }
+        return exercises;
+    }
+}

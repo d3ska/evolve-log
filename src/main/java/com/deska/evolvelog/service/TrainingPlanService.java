@@ -1,0 +1,137 @@
+package com.deska.evolvelog.service;
+
+import com.deska.evolvelog.domain.PlannedExercise;
+import com.deska.evolvelog.domain.TrainingPlan;
+import com.deska.evolvelog.domain.User;
+import com.deska.evolvelog.dto.request.CreatePlannedExerciseRequest;
+import com.deska.evolvelog.dto.request.CreateTrainingPlanRequest;
+import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
+import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
+import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.repository.PlannedExerciseRepository;
+import com.deska.evolvelog.repository.TrainingPlanRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class TrainingPlanService {
+
+    private final TrainingPlanRepository planRepository;
+    private final PlannedExerciseRepository exerciseRepository;
+
+    @Transactional
+    public TrainingPlan create(User user, CreateTrainingPlanRequest request) {
+        TrainingPlan plan = TrainingPlan.builder()
+                .user(user)
+                .name(request.name())
+                .description(request.description())
+                .dayOfWeek(request.dayOfWeek())
+                .isActive(true)
+                .build();
+
+        if (request.plannedExercises() != null && !request.plannedExercises().isEmpty()) {
+            List<PlannedExercise> exercises = buildExercises(request.plannedExercises(), plan);
+            plan.getPlannedExercises().addAll(exercises);
+        }
+
+        return planRepository.save(plan);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TrainingPlan> findAll(UUID userId) {
+        return planRepository.findByUserIdOrderByCreatedAtAsc(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public TrainingPlan findById(UUID id, UUID userId) {
+        return planRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("TrainingPlan", id));
+    }
+
+    @Transactional
+    public TrainingPlan update(UUID id, UUID userId, UpdateTrainingPlanRequest request) {
+        TrainingPlan plan = findById(id, userId);
+        if (request.name() != null) plan.setName(request.name());
+        if (request.description() != null) plan.setDescription(request.description());
+        if (request.dayOfWeek() != null) plan.setDayOfWeek(request.dayOfWeek());
+        if (request.isActive() != null) plan.setActive(request.isActive());
+        return planRepository.save(plan);
+    }
+
+    @Transactional
+    public void delete(UUID id, UUID userId) {
+        TrainingPlan plan = findById(id, userId);
+        planRepository.delete(plan);
+    }
+
+    @Transactional
+    public PlannedExercise addExercise(UUID planId, UUID userId, CreatePlannedExerciseRequest request) {
+        TrainingPlan plan = findById(planId, userId);
+        int position = request.position() != null
+                ? request.position()
+                : exerciseRepository.countByTrainingPlanId(planId);
+
+        PlannedExercise exercise = PlannedExercise.builder()
+                .trainingPlan(plan)
+                .name(request.name())
+                .sets(request.sets())
+                .repsMin(request.repsMin())
+                .repsMax(request.repsMax())
+                .restSeconds(request.restSeconds())
+                .position(position)
+                .notes(request.notes())
+                .build();
+
+        return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public PlannedExercise updateExercise(UUID planId, UUID exerciseId, UUID userId,
+                                          UpdatePlannedExerciseRequest request) {
+        findById(planId, userId);
+        PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
+
+        if (request.name() != null) exercise.setName(request.name());
+        if (request.sets() != null) exercise.setSets(request.sets());
+        if (request.repsMin() != null) exercise.setRepsMin(request.repsMin());
+        if (request.repsMax() != null) exercise.setRepsMax(request.repsMax());
+        if (request.restSeconds() != null) exercise.setRestSeconds(request.restSeconds());
+        if (request.position() != null) exercise.setPosition(request.position());
+        if (request.notes() != null) exercise.setNotes(request.notes());
+
+        return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public void deleteExercise(UUID planId, UUID exerciseId, UUID userId) {
+        findById(planId, userId);
+        PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
+        exerciseRepository.delete(exercise);
+    }
+
+    private List<PlannedExercise> buildExercises(List<CreatePlannedExerciseRequest> requests, TrainingPlan plan) {
+        List<PlannedExercise> exercises = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            CreatePlannedExerciseRequest req = requests.get(i);
+            exercises.add(PlannedExercise.builder()
+                    .trainingPlan(plan)
+                    .name(req.name())
+                    .sets(req.sets())
+                    .repsMin(req.repsMin())
+                    .repsMax(req.repsMax())
+                    .restSeconds(req.restSeconds())
+                    .position(req.position() != null ? req.position() : i)
+                    .notes(req.notes())
+                    .build());
+        }
+        return exercises;
+    }
+}

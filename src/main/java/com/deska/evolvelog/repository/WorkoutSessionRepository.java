@@ -1,0 +1,24 @@
+package com.deska.evolvelog.repository;
+
+import com.deska.evolvelog.domain.WorkoutSession;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, UUID> {
+    Page<WorkoutSession> findByUserIdOrderByDateDesc(UUID userId, Pageable pageable);
+    List<WorkoutSession> findByUserIdAndDateBetweenOrderByDateAsc(UUID userId, LocalDateTime start, LocalDateTime end);
+
+    // Eagerly loads exercises to avoid LazyInitializationException in detail view
+    @EntityGraph(attributePaths = {"exercises"})
+    @Query("SELECT s FROM WorkoutSession s WHERE s.id = :id AND s.user.id = :userId")
+    Optional<WorkoutSession> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+}

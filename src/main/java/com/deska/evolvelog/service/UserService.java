@@ -1,0 +1,21 @@
+package com.deska.evolvelog.service;
+
+import com.deska.evolvelog.domain.User;
+import com.deska.evolvelog.dto.request.UpdateUserPreferencesRequest;
+import com.deska.evolvelog.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    @Transactional
+    public User updatePreferences(User user, UpdateUserPreferencesRequest request) {
+        user.setUnitSystem(request.unitSystem());
+        return userRepository.save(user);
+    }
+}
