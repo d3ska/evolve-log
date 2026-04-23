@@ -27,8 +27,14 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column
+    private String name;
+
+    @Column
     private String passwordHash;
+
+    @Column(unique = true)
+    private String googleSub;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

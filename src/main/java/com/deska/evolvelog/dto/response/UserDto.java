@@ -9,10 +9,11 @@ import java.util.UUID;
 public record UserDto(
         UUID id,
         String email,
+        String name,
         UnitSystem unitSystem,
         LocalDateTime createdAt
 ) {
     public static UserDto from(User user) {
-        return new UserDto(user.getId(), user.getEmail(), user.getUnitSystem(), user.getCreatedAt());
+        return new UserDto(user.getId(), user.getEmail(), user.getName(), user.getUnitSystem(), user.getCreatedAt());
     }
 }
