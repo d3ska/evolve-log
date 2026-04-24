@@ -33,7 +33,7 @@ public class PhotoController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProgressPhotoDto>> upload(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @RequestParam MultipartFile file,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam PhotoCategory category,
@@ -46,7 +46,7 @@ public class PhotoController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProgressPhotoDto>>> getAll(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
@@ -58,7 +58,7 @@ public class PhotoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProgressPhotoDto>> getById(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
         ProgressPhotoDto dto = ProgressPhotoDto.from(photoService.findById(id, user.getId()));
@@ -70,7 +70,7 @@ public class PhotoController {
      */
     @GetMapping("/{id}/file")
     public ResponseEntity<Resource> getFile(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
         Resource resource = photoService.loadFile(id, user.getId());
@@ -82,7 +82,7 @@ public class PhotoController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
         photoService.delete(id, user.getId());

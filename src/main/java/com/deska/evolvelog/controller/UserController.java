@@ -20,7 +20,7 @@ public class UserController {
 
     @PatchMapping("/preferences")
     public ResponseEntity<ApiResponse<UserDto>> updatePreferences(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody UpdateUserPreferencesRequest request
     ) {
         User updated = userService.updatePreferences(user, request);

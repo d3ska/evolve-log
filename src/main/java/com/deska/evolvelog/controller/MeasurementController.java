@@ -29,7 +29,7 @@ public class MeasurementController {
     @PostMapping
     public ResponseEntity<ApiResponse<MeasurementDto>> create(
             @Valid @RequestBody CreateMeasurementRequest request,
-            @AuthenticationPrincipal(expression = "user") User user) {
+            @AuthenticationPrincipal User user) {
 
         Measurement measurement = measurementService.create(user, request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -38,7 +38,7 @@ public class MeasurementController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<java.util.List<MeasurementDto>>> findAll(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -52,7 +52,7 @@ public class MeasurementController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<MeasurementDto>> findById(
             @PathVariable UUID id,
-            @AuthenticationPrincipal(expression = "user") User user) {
+            @AuthenticationPrincipal User user) {
 
         Measurement measurement = measurementService.findById(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(MeasurementDto.from(measurement)));
@@ -62,7 +62,7 @@ public class MeasurementController {
     public ResponseEntity<ApiResponse<MeasurementDto>> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateMeasurementRequest request,
-            @AuthenticationPrincipal(expression = "user") User user) {
+            @AuthenticationPrincipal User user) {
 
         Measurement measurement = measurementService.update(id, user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success(MeasurementDto.from(measurement)));
@@ -71,7 +71,7 @@ public class MeasurementController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable UUID id,
-            @AuthenticationPrincipal(expression = "user") User user) {
+            @AuthenticationPrincipal User user) {
 
         measurementService.delete(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(null));

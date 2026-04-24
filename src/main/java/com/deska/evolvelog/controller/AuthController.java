@@ -3,7 +3,6 @@ package com.deska.evolvelog.controller;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.response.UserDto;
-import com.deska.evolvelog.security.CustomOidcUser;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,13 +24,10 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserDto>> me(@AuthenticationPrincipal Object principal) {
-        if (principal instanceof User user) {
-            return ResponseEntity.ok(ApiResponse.success(UserDto.from(user)));
+    public ResponseEntity<ApiResponse<UserDto>> me(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
         }
-        if (principal instanceof CustomOidcUser customOidcUser) {
-            return ResponseEntity.ok(ApiResponse.success(UserDto.from(customOidcUser.getUser())));
-        }
-        return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+        return ResponseEntity.ok(ApiResponse.success(UserDto.from(user)));
     }
 }

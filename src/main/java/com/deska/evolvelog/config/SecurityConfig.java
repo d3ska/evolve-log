@@ -1,5 +1,6 @@
 package com.deska.evolvelog.config;
 
+import com.deska.evolvelog.security.CustomOidcUser;
 import com.deska.evolvelog.service.GoogleOAuth2UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,14 +8,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -53,6 +58,13 @@ public class SecurityConfig {
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(info -> info.oidcUserService(googleOAuth2UserService))
                 .successHandler((request, response, authentication) -> {
+                    CustomOidcUser oidcUser = (CustomOidcUser) authentication.getPrincipal();
+                    var userAuth = UsernamePasswordAuthenticationToken.authenticated(
+                            oidcUser.getUser(), null, oidcUser.getUser().getAuthorities());
+                    SecurityContext context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(userAuth);
+                    SecurityContextHolder.setContext(context);
+                    new HttpSessionSecurityContextRepository().saveContext(context, request, response);
                     response.sendRedirect(frontendUrl + "/auth/callback");
                 })
                 .failureHandler((request, response, exception) -> {

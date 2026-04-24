@@ -28,7 +28,7 @@ public class TrainingPlanController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<TrainingPlanDto>> create(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody CreateTrainingPlanRequest request
     ) {
         TrainingPlanDto dto = TrainingPlanDto.from(planService.create(user, request));
@@ -37,7 +37,7 @@ public class TrainingPlanController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TrainingPlanDto>>> getAll(
-            @AuthenticationPrincipal(expression = "user") User user
+            @AuthenticationPrincipal User user
     ) {
         List<TrainingPlanDto> plans = planService.findAll(user.getId()).stream()
                 .map(TrainingPlanDto::summary)
@@ -47,7 +47,7 @@ public class TrainingPlanController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> getById(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
         TrainingPlanDto dto = TrainingPlanDto.from(planService.findById(id, user.getId()));
@@ -56,7 +56,7 @@ public class TrainingPlanController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> update(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateTrainingPlanRequest request
     ) {
@@ -66,7 +66,7 @@ public class TrainingPlanController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
         planService.delete(id, user.getId());
@@ -77,7 +77,7 @@ public class TrainingPlanController {
 
     @PostMapping("/{planId}/exercises")
     public ResponseEntity<ApiResponse<PlannedExerciseDto>> addExercise(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID planId,
             @Valid @RequestBody CreatePlannedExerciseRequest request
     ) {
@@ -87,7 +87,7 @@ public class TrainingPlanController {
 
     @PatchMapping("/{planId}/exercises/{exerciseId}")
     public ResponseEntity<ApiResponse<PlannedExerciseDto>> updateExercise(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID planId,
             @PathVariable UUID exerciseId,
             @Valid @RequestBody UpdatePlannedExerciseRequest request
@@ -99,7 +99,7 @@ public class TrainingPlanController {
 
     @DeleteMapping("/{planId}/exercises/{exerciseId}")
     public ResponseEntity<Void> deleteExercise(
-            @AuthenticationPrincipal(expression = "user") User user,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID planId,
             @PathVariable UUID exerciseId
     ) {
