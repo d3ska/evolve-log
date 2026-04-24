@@ -1,21 +1,27 @@
 package com.deska.evolvelog.controller;
 
+import com.deska.evolvelog.domain.FitatuFoodLog;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.response.DailyHealthMetricsDto;
 import com.deska.evolvelog.exception.ApiException;
+import com.deska.evolvelog.repository.FitatuFoodLogRepository;
 import com.deska.evolvelog.service.FitatuCsvParser;
+import com.deska.evolvelog.service.FitatuCsvParser.ParseResult;
 import com.deska.evolvelog.service.HealthMetricService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -69,12 +75,17 @@ public class NutritionController {
 
     private final FitatuCsvParser csvParser;
     private final HealthMetricService healthMetricService;
+    private final FitatuFoodLogRepository foodLogRepository;
 
-    public NutritionController(FitatuCsvParser csvParser, HealthMetricService healthMetricService) {
+    public NutritionController(FitatuCsvParser csvParser,
+                               HealthMetricService healthMetricService,
+                               FitatuFoodLogRepository foodLogRepository) {
         this.csvParser = csvParser;
         this.healthMetricService = healthMetricService;
+        this.foodLogRepository = foodLogRepository;
     }
 
+    @Transactional
     @PostMapping("/api/nutrition/upload")
     public ResponseEntity<ApiResponse<Integer>> upload(
             @AuthenticationPrincipal User user,
@@ -84,15 +95,16 @@ public class NutritionController {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Uploaded file is empty");
         }
 
-        Map<LocalDate, Map<String, BigDecimal>> parsed;
+        ParseResult parsed;
         try {
             parsed = csvParser.parse(file.getInputStream());
         } catch (IOException | IllegalArgumentException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to parse CSV: " + e.getMessage());
         }
 
+        // Save daily aggregates to health_metrics (upsert)
         int count = 0;
-        for (Map.Entry<LocalDate, Map<String, BigDecimal>> dayEntry : parsed.entrySet()) {
+        for (Map.Entry<LocalDate, Map<String, BigDecimal>> dayEntry : parsed.dailyTotals().entrySet()) {
             LocalDate date = dayEntry.getKey();
             for (Map.Entry<String, BigDecimal> metric : dayEntry.getValue().entrySet()) {
                 String key = metric.getKey();
@@ -101,6 +113,26 @@ public class NutritionController {
                 count++;
             }
         }
+
+        // Replace raw food log rows for the uploaded dates
+        List<LocalDate> uploadedDates = new ArrayList<>(parsed.dailyTotals().keySet());
+        if (!uploadedDates.isEmpty()) {
+            foodLogRepository.deleteByUserIdAndDateIn(user.getId(), uploadedDates);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        List<FitatuFoodLog> rows = parsed.rawRows().stream()
+                .map(row -> FitatuFoodLog.builder()
+                        .user(user)
+                        .date(row.date())
+                        .meal(row.meal())
+                        .foodName(row.foodName())
+                        .quantityG(row.quantityG())
+                        .nutrients(row.nutrients())
+                        .importedAt(now)
+                        .build())
+                .toList();
+        foodLogRepository.saveAll(rows);
 
         return ResponseEntity.ok(ApiResponse.success(count));
     }

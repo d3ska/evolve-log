@@ -13,7 +13,9 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -64,14 +66,28 @@ public class FitatuCsvParser {
             Map.entry("Sól (g)",                 "salt_g")
     );
 
+    public record FoodLogRow(
+            LocalDate date,
+            String meal,
+            String foodName,
+            BigDecimal quantityG,
+            Map<String, BigDecimal> nutrients
+    ) {}
+
+    public record ParseResult(
+            Map<LocalDate, Map<String, BigDecimal>> dailyTotals,
+            List<FoodLogRow> rawRows
+    ) {}
+
     /**
-     * Parses a Fitatu CSV export and aggregates all nutritional values by date.
+     * Parses a Fitatu CSV export.
      *
      * @param inputStream the CSV file stream
-     * @return map of date → (metric key → summed daily value)
+     * @return ParseResult containing daily aggregates and raw per-item rows
      */
-    public Map<LocalDate, Map<String, BigDecimal>> parse(InputStream inputStream) throws IOException {
-        Map<LocalDate, Map<String, BigDecimal>> result = new LinkedHashMap<>();
+    public ParseResult parse(InputStream inputStream) throws IOException {
+        Map<LocalDate, Map<String, BigDecimal>> dailyTotals = new LinkedHashMap<>();
+        List<FoodLogRow> rawRows = new ArrayList<>();
 
         // Read all bytes and strip UTF-8 BOM (common in Polish Windows exports: EF BB BF)
         byte[] bytes = inputStream.readAllBytes();
@@ -101,7 +117,8 @@ public class FitatuCsvParser {
                     continue;
                 }
 
-                Map<String, BigDecimal> dayTotals = result.computeIfAbsent(date, k -> new LinkedHashMap<>());
+                Map<String, BigDecimal> dayTotals = dailyTotals.computeIfAbsent(date, k -> new LinkedHashMap<>());
+                Map<String, BigDecimal> rowNutrients = new LinkedHashMap<>();
 
                 for (Map.Entry<String, String> mapping : COLUMN_MAP.entrySet()) {
                     String csvHeader = mapping.getKey();
@@ -115,13 +132,36 @@ public class FitatuCsvParser {
                     try {
                         BigDecimal value = new BigDecimal(raw.trim().replace(',', '.'));
                         dayTotals.merge(metricKey, value, BigDecimal::add);
+                        rowNutrients.put(metricKey, value);
                     } catch (NumberFormatException e) {
                         log.debug("Non-numeric value '{}' for column '{}', skipping", raw, csvHeader);
                     }
                 }
+
+                String meal     = tryGet(record, "Posiłek");
+                String foodName = tryGet(record, "Produkt");
+                BigDecimal quantityG = tryGetDecimal(record, "Ilość (g)");
+
+                rawRows.add(new FoodLogRow(date, meal, foodName, quantityG, rowNutrients));
             }
         }
 
-        return result;
+        return new ParseResult(dailyTotals, rawRows);
+    }
+
+    private static String tryGet(CSVRecord record, String header) {
+        if (!record.isMapped(header)) return null;
+        String val = record.get(header);
+        return (val == null || val.isBlank()) ? null : val.trim();
+    }
+
+    private static BigDecimal tryGetDecimal(CSVRecord record, String header) {
+        String raw = tryGet(record, header);
+        if (raw == null) return null;
+        try {
+            return new BigDecimal(raw.replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
