@@ -27,7 +27,7 @@ public class WithingsController {
 
     @PostMapping("/api/withings/exchange")
     public ResponseEntity<ApiResponse<WithingsStatusDto>> exchange(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @Valid @RequestBody WithingsExchangeRequest request) {
 
         withingsService.exchangeCode(user, request.code());
@@ -37,7 +37,7 @@ public class WithingsController {
 
     @GetMapping("/api/withings/status")
     public ResponseEntity<ApiResponse<WithingsStatusDto>> status(
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         if (!withingsService.isConnected(user.getId())) {
             return ResponseEntity.ok(ApiResponse.success(WithingsStatusDto.disconnected()));
@@ -48,7 +48,7 @@ public class WithingsController {
 
     @PostMapping("/api/withings/sync")
     public ResponseEntity<ApiResponse<Integer>> sync(
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         int count = withingsService.syncMeasurements(user);
         return ResponseEntity.ok(ApiResponse.success(count));
@@ -56,7 +56,7 @@ public class WithingsController {
 
     @GetMapping("/api/withings/measurements")
     public ResponseEntity<ApiResponse<List<WithingsMeasurementDto>>> measurements(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
@@ -71,7 +71,7 @@ public class WithingsController {
 
     @DeleteMapping("/api/withings/connection")
     public ResponseEntity<ApiResponse<Void>> disconnect(
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         withingsService.disconnect(user);
         return ResponseEntity.ok(ApiResponse.success(null));

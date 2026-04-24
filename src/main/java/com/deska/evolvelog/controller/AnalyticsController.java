@@ -34,7 +34,7 @@ public class AnalyticsController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<AnalyticsDto>> getAnalytics(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
@@ -48,7 +48,7 @@ public class AnalyticsController {
      */
     @GetMapping("/report")
     public ResponseEntity<ApiResponse<BiweeklyReportDto>> getBiweeklyReport(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
@@ -63,7 +63,7 @@ public class AnalyticsController {
      */
     @GetMapping("/progress")
     public ResponseEntity<ApiResponse<ExerciseProgressDto>> getExerciseProgress(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam String exerciseName,
             @RequestParam(required = false) UUID planId
     ) {
@@ -77,7 +77,7 @@ public class AnalyticsController {
      */
     @GetMapping("/exercises")
     public ResponseEntity<ApiResponse<List<String>>> getExerciseNames(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal(expression = "user") User user
     ) {
         List<String> names = analyticsService.getDistinctExerciseNames(user.getId());
         return ResponseEntity.ok(ApiResponse.success(names));

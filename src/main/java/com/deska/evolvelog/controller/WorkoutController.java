@@ -34,7 +34,7 @@ public class WorkoutController {
     @PostMapping
     public ResponseEntity<ApiResponse<WorkoutSessionDto>> create(
             @Valid @RequestBody CreateWorkoutSessionRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         WorkoutSession session = workoutService.create(user, request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -43,7 +43,7 @@ public class WorkoutController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<WorkoutSessionDto>>> findAll(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -57,7 +57,7 @@ public class WorkoutController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<WorkoutSessionDto>> findById(
             @PathVariable UUID id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         WorkoutSession session = workoutService.findById(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(WorkoutSessionDto.from(session)));
@@ -67,7 +67,7 @@ public class WorkoutController {
     public ResponseEntity<ApiResponse<WorkoutSessionDto>> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateWorkoutSessionRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         WorkoutSession session = workoutService.update(id, user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success(WorkoutSessionDto.from(session)));
@@ -76,7 +76,7 @@ public class WorkoutController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable UUID id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         workoutService.delete(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(null));
@@ -86,7 +86,7 @@ public class WorkoutController {
     public ResponseEntity<ApiResponse<ExerciseDto>> addExercise(
             @PathVariable UUID id,
             @Valid @RequestBody CreateExerciseRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         Exercise exercise = workoutService.addExercise(id, user.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -98,7 +98,7 @@ public class WorkoutController {
             @PathVariable UUID id,
             @PathVariable UUID exerciseId,
             @Valid @RequestBody UpdateExerciseRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         Exercise exercise = workoutService.updateExercise(id, exerciseId, user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success(ExerciseDto.from(exercise)));
@@ -108,7 +108,7 @@ public class WorkoutController {
     public ResponseEntity<ApiResponse<Void>> deleteExercise(
             @PathVariable UUID id,
             @PathVariable UUID exerciseId,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
 
         workoutService.deleteExercise(id, exerciseId, user.getId());
         return ResponseEntity.ok(ApiResponse.success(null));

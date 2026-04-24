@@ -33,7 +33,7 @@ public class MediaAttachmentController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<MediaAttachmentDto>> upload(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam MultipartFile file,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) String notes
@@ -45,7 +45,7 @@ public class MediaAttachmentController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<MediaAttachmentDto>>> getAll(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
@@ -57,7 +57,7 @@ public class MediaAttachmentController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<MediaAttachmentDto>> getById(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @PathVariable UUID id
     ) {
         MediaAttachmentDto dto = MediaAttachmentDto.from(
@@ -70,7 +70,7 @@ public class MediaAttachmentController {
      */
     @GetMapping("/{id}/file")
     public ResponseEntity<Resource> getFile(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @PathVariable UUID id
     ) {
         MediaAttachment attachment = mediaAttachmentService.findById(id, user.getId());
@@ -83,7 +83,7 @@ public class MediaAttachmentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal(expression = "user") User user,
             @PathVariable UUID id
     ) {
         mediaAttachmentService.delete(id, user.getId());

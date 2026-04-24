@@ -1,6 +1,8 @@
 package com.deska.evolvelog.config;
 
 import com.deska.evolvelog.service.GoogleOAuth2UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +24,8 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final GoogleOAuth2UserService googleOAuth2UserService;
 
@@ -47,11 +51,12 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
             .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(info -> info.userService(googleOAuth2UserService))
+                .userInfoEndpoint(info -> info.oidcUserService(googleOAuth2UserService))
                 .successHandler((request, response, authentication) -> {
                     response.sendRedirect(frontendUrl + "/auth/callback");
                 })
                 .failureHandler((request, response, exception) -> {
+                    log.error("OAuth2 login failure", exception);
                     response.sendRedirect(frontendUrl + "/login?error=oauth");
                 })
             );
