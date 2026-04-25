@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -149,6 +151,14 @@ public class SupplementService {
     @Transactional(readOnly = true)
     public List<SupplementLogDto> listLogs(UUID userId, int limit) {
         return logRepository.findByUserIdOrderByTakenAtDesc(userId, PageRequest.of(0, limit))
+                .stream().map(SupplementLogDto::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplementLogDto> listLogsByDate(UUID userId, LocalDate date) {
+        OffsetDateTime start = date.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        OffsetDateTime end = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        return logRepository.findByUserIdAndTakenAtBetweenOrderByTakenAtDesc(userId, start, end)
                 .stream().map(SupplementLogDto::from).toList();
     }
 

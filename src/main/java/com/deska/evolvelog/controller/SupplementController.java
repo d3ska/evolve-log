@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -112,8 +115,12 @@ public class SupplementController {
     @GetMapping("/logs")
     public ResponseEntity<ApiResponse<List<SupplementLogDto>>> listLogs(
             @AuthenticationPrincipal User user,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(defaultValue = "50") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(supplementService.listLogs(user.getId(), limit)));
+        List<SupplementLogDto> logs = date != null
+                ? supplementService.listLogsByDate(user.getId(), date)
+                : supplementService.listLogs(user.getId(), limit);
+        return ResponseEntity.ok(ApiResponse.success(logs));
     }
 
     @DeleteMapping("/logs/{logId}")
