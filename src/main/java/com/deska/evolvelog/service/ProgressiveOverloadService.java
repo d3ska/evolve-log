@@ -2,6 +2,7 @@ package com.deska.evolvelog.service;
 
 import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.ExerciseDefinition;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.OverloadHistoryEntryDto;
 import com.deska.evolvelog.dto.response.ProgressiveOverloadDto;
 import com.deska.evolvelog.exception.ApiException;
@@ -51,11 +52,12 @@ public class ProgressiveOverloadService {
         List<OverloadHistoryEntryDto> entries = new ArrayList<>(ascList.size());
 
         for (Exercise e : ascList) {
-            Integer reps = e.getReps();
+            Integer reps = e.getReps() != null ? e.getReps() : effectiveReps(e);
             Integer sets = e.getSets();
-            BigDecimal e1rm = (reps != null) ? VolumeCalculator.epleyE1RM(e.getWeightKg(), reps) : null;
-            BigDecimal performanceIndicator = e1rm != null ? e1rm : e.getWeightKg();
-            BigDecimal vl = (sets != null && reps != null) ? VolumeCalculator.volumeLoad(sets, reps, e.getWeightKg()) : null;
+            BigDecimal weightKg = e.getWeightKg() != null ? e.getWeightKg() : effectiveWeight(e);
+            BigDecimal e1rm = (reps != null) ? VolumeCalculator.epleyE1RM(weightKg, reps) : null;
+            BigDecimal performanceIndicator = e1rm != null ? e1rm : weightKg;
+            BigDecimal vl = VolumeCalculator.volumeLoad(sets, reps, weightKg);
 
             boolean isPR;
             if (runningMaxE1rm == null) {
@@ -71,9 +73,9 @@ public class ProgressiveOverloadService {
             entries.add(new OverloadHistoryEntryDto(
                     e.getWorkoutSession().getDate().toLocalDate(),
                     e.getWorkoutSession().getId(),
-                    e.getSets(),
-                    e.getReps(),
-                    e.getWeightKg(),
+                    sets,
+                    reps,
+                    weightKg,
                     e1rm,
                     vl,
                     e.getRpe(),
@@ -102,5 +104,23 @@ public class ProgressiveOverloadService {
 
         // Return most-recent-first as specified
         return new ProgressiveOverloadDto(definitionId, definition.getName(), withDeltas.reversed());
+    }
+
+    /** Reps from the heaviest completed set, or null if no sets have data. */
+    private static Integer effectiveReps(Exercise e) {
+        return e.getWorkoutSets().stream()
+                .filter(ws -> ws.getReps() != null && ws.getWeightKg() != null)
+                .max(java.util.Comparator.comparing(WorkoutSet::getWeightKg))
+                .map(WorkoutSet::getReps)
+                .orElse(null);
+    }
+
+    /** Max weight across completed sets, or null if no sets have data. */
+    private static BigDecimal effectiveWeight(Exercise e) {
+        return e.getWorkoutSets().stream()
+                .filter(ws -> ws.getWeightKg() != null)
+                .map(WorkoutSet::getWeightKg)
+                .max(BigDecimal::compareTo)
+                .orElse(null);
     }
 }

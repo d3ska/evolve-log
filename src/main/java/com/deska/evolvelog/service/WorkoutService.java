@@ -146,7 +146,26 @@ public class WorkoutService {
                 .orElseThrow(() -> new ResourceNotFoundException("WorkoutSet",
                         exerciseId + "/" + setNumber));
         ws.update(reps, weightKg);
-        return workoutSetRepository.save(ws);
+        workoutSetRepository.save(ws);
+
+        // Denormalize: sync aggregated reps/weight to the Exercise so analytics queries work
+        Exercise exercise = exerciseRepository.findById(exerciseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
+        List<WorkoutSet> allSets = exercise.getWorkoutSets();
+        java.math.BigDecimal maxWeight = allSets.stream()
+                .filter(s -> s.getWeightKg() != null)
+                .map(WorkoutSet::getWeightKg)
+                .max(java.math.BigDecimal::compareTo)
+                .orElse(null);
+        Integer effectiveReps = allSets.stream()
+                .filter(s -> s.getWeightKg() != null && s.getWeightKg().equals(maxWeight) && s.getReps() != null)
+                .map(WorkoutSet::getReps)
+                .findFirst()
+                .orElse(null);
+        exercise.updateAggregates(effectiveReps, maxWeight);
+        exerciseRepository.save(exercise);
+
+        return ws;
     }
 
     @Transactional

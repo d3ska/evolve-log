@@ -67,6 +67,11 @@ public class Exercise {
         createdAt = LocalDateTime.now();
     }
 
+    public void updateAggregates(Integer reps, BigDecimal weightKg) {
+        this.reps = reps;
+        this.weightKg = weightKg;
+    }
+
     public void applyPatch(String name, Integer sets, Integer reps, BigDecimal weightKg, String notes,
                            Integer position, UUID exerciseDefinitionId, BigDecimal rpe, String primaryMuscle) {
         if (name != null) this.name = name;

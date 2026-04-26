@@ -13,10 +13,10 @@ public final class VolumeCalculator {
 
     /**
      * Volume Load = sets × reps × weightKg.
-     * Returns null when weightKg is null (bodyweight exercises).
+     * Returns null when any input is null (bodyweight or incomplete exercises).
      */
-    public static BigDecimal volumeLoad(int sets, int reps, BigDecimal weightKg) {
-        if (weightKg == null) return null;
+    public static BigDecimal volumeLoad(Integer sets, Integer reps, BigDecimal weightKg) {
+        if (sets == null || reps == null || weightKg == null) return null;
         return weightKg.multiply(BigDecimal.valueOf((long) sets * reps));
     }
 

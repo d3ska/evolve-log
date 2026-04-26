@@ -130,18 +130,36 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
                                             @Param("userId") UUID userId);
 
     // Weekly volume aggregation by muscle group — native query for DATE_TRUNC
+    // Volume is computed from workout_sets when exercise-level reps/weight are null (plan-based workouts),
+    // falling back to exercise-level fields for older exercises logged without individual sets.
     @Query(value = """
             SELECT DATE_TRUNC('week', ws.date)::date AS week_start,
                    e.primary_muscle                  AS muscle,
-                   SUM(e.sets * e.reps * e.weight_kg) AS volume_load,
-                   COUNT(DISTINCT ws.id)              AS session_count
+                   SUM(
+                       COALESCE(
+                           CASE WHEN e.reps IS NOT NULL AND e.weight_kg IS NOT NULL
+                                THEN e.sets * e.reps * e.weight_kg END,
+                           (SELECT SUM(s.reps * s.weight_kg)
+                            FROM workout_sets s
+                            WHERE s.exercise_id = e.id
+                              AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL)
+                       )
+                   )                                 AS volume_load,
+                   COUNT(DISTINCT ws.id)             AS session_count
             FROM exercises e
             JOIN workout_sessions ws ON e.workout_session_id = ws.id
             WHERE ws.user_id       = :userId
               AND e.primary_muscle IS NOT NULL
-              AND e.weight_kg      IS NOT NULL
               AND ws.date BETWEEN :from AND :to
               AND (:muscle IS NULL OR e.primary_muscle = :muscle)
+              AND (
+                  (e.reps IS NOT NULL AND e.weight_kg IS NOT NULL)
+                  OR EXISTS (
+                      SELECT 1 FROM workout_sets s
+                      WHERE s.exercise_id = e.id
+                        AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
+                  )
+              )
             GROUP BY week_start, e.primary_muscle
             ORDER BY week_start ASC, e.primary_muscle ASC
             """, nativeQuery = true)

@@ -7,8 +7,8 @@ import java.util.UUID;
 public record OverloadHistoryEntryDto(
         LocalDate sessionDate,
         UUID sessionId,
-        int sets,
-        int reps,
+        Integer sets,
+        Integer reps,
         BigDecimal weightKg,
         BigDecimal e1Rm,
         BigDecimal volumeLoad,
