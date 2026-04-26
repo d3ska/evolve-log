@@ -7,5 +7,6 @@ public record WeeklyMuscleVolumeDto(
         LocalDate weekStart,
         String muscle,
         BigDecimal volumeLoad,
-        long sessionCount
+        long sessionCount,
+        long setCount
 ) {}

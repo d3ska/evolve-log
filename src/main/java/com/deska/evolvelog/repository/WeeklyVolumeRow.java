@@ -11,4 +11,5 @@ public interface WeeklyVolumeRow {
     String getMuscle();
     BigDecimal getVolumeLoad();
     Long getSessionCount();
+    Long getSetCount();
 }

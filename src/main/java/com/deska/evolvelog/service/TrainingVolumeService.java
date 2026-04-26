@@ -103,7 +103,7 @@ public class TrainingVolumeService {
 
         List<WeeklyVolumeRow> rows = exerciseRepository.findWeeklyVolumeByMuscle(userId, fromDt, toDt, muscle);
         return rows.stream()
-                .map(r -> new WeeklyMuscleVolumeDto(r.getWeekStart(), r.getMuscle(), r.getVolumeLoad(), r.getSessionCount()))
+                .map(r -> new WeeklyMuscleVolumeDto(r.getWeekStart(), r.getMuscle(), r.getVolumeLoad(), r.getSessionCount(), r.getSetCount()))
                 .toList();
     }
 }

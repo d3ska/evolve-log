@@ -145,7 +145,8 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
                               AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL)
                        )
                    )                                 AS volume_load,
-                   COUNT(DISTINCT ws.id)             AS session_count
+                   COUNT(DISTINCT ws.id)             AS session_count,
+                   SUM(e.sets)                       AS set_count
             FROM exercises e
             JOIN workout_sessions ws ON e.workout_session_id = ws.id
             WHERE ws.user_id       = :userId
