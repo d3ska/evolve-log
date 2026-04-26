@@ -10,7 +10,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "media_attachments")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

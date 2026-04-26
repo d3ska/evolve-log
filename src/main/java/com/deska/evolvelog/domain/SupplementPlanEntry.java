@@ -9,7 +9,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "supplement_plan_entries")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

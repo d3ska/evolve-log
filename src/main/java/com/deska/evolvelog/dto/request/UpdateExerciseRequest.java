@@ -2,10 +2,12 @@ package com.deska.evolvelog.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
 public record UpdateExerciseRequest(
+        @Size(max = 100, message = "Name must be at most 100 characters")
         String name,
 
         @Min(value = 1, message = "Sets must be at least 1")

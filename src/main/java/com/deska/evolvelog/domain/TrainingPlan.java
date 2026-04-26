@@ -12,7 +12,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "training_plans")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -51,5 +50,12 @@ public class TrainingPlan {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public void applyPatch(String name, String description, DayOfWeek dayOfWeek, Boolean isActive) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+        if (dayOfWeek != null) this.dayOfWeek = dayOfWeek;
+        if (isActive != null) this.isActive = isActive;
     }
 }

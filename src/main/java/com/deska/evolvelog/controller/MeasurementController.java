@@ -69,11 +69,11 @@ public class MeasurementController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(
+    public ResponseEntity<Void> delete(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
 
         measurementService.delete(id, user.getId());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.noContent().build();
     }
 }

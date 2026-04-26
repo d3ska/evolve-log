@@ -57,10 +57,7 @@ public class TrainingPlanService {
     @Transactional
     public TrainingPlan update(UUID id, UUID userId, UpdateTrainingPlanRequest request) {
         TrainingPlan plan = findById(id, userId);
-        if (request.name() != null) plan.setName(request.name());
-        if (request.description() != null) plan.setDescription(request.description());
-        if (request.dayOfWeek() != null) plan.setDayOfWeek(request.dayOfWeek());
-        if (request.isActive() != null) plan.setActive(request.isActive());
+        plan.applyPatch(request.name(), request.description(), request.dayOfWeek(), request.isActive());
         return planRepository.save(plan);
     }
 
@@ -98,13 +95,8 @@ public class TrainingPlanService {
         PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
 
-        if (request.name() != null) exercise.setName(request.name());
-        if (request.sets() != null) exercise.setSets(request.sets());
-        if (request.repsMin() != null) exercise.setRepsMin(request.repsMin());
-        if (request.repsMax() != null) exercise.setRepsMax(request.repsMax());
-        if (request.restSeconds() != null) exercise.setRestSeconds(request.restSeconds());
-        if (request.position() != null) exercise.setPosition(request.position());
-        if (request.notes() != null) exercise.setNotes(request.notes());
+        exercise.applyPatch(request.name(), request.sets(), request.repsMin(), request.repsMax(),
+                request.restSeconds(), request.position(), request.notes());
 
         return exerciseRepository.save(exercise);
     }

@@ -70,12 +70,10 @@ public class WorkoutService {
     @Transactional
     public WorkoutSession update(UUID id, UUID userId, UpdateWorkoutSessionRequest request) {
         WorkoutSession session = findById(id, userId);
-        if (request.date() != null) session.setDate(request.date());
-        if (request.durationMinutes() != null) session.setDurationMinutes(request.durationMinutes());
-        if (request.notes() != null) session.setNotes(request.notes());
-        if (request.trainingPlanId() != null) {
-            session.setTrainingPlan(resolveTrainingPlan(request.trainingPlanId(), userId));
-        }
+        TrainingPlan plan = request.trainingPlanId() != null
+                ? resolveTrainingPlan(request.trainingPlanId(), userId)
+                : null;
+        session.applyPatch(request.date(), request.durationMinutes(), request.notes(), plan);
         return sessionRepository.save(session);
     }
 
@@ -112,12 +110,8 @@ public class WorkoutService {
         Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
 
-        if (request.name() != null) exercise.setName(request.name());
-        if (request.sets() != null) exercise.setSets(request.sets());
-        if (request.reps() != null) exercise.setReps(request.reps());
-        if (request.weightKg() != null) exercise.setWeightKg(request.weightKg());
-        if (request.notes() != null) exercise.setNotes(request.notes());
-        if (request.position() != null) exercise.setPosition(request.position());
+        exercise.applyPatch(request.name(), request.sets(), request.reps(),
+                request.weightKg(), request.notes(), request.position());
 
         return exerciseRepository.save(exercise);
     }

@@ -125,9 +125,7 @@ public class WithingsService {
         WithingsToken token = tokenRepository.findByUserId(user.getId())
                 .orElse(WithingsToken.builder().user(user).build());
 
-        token.setAccessToken(accessToken);
-        token.setRefreshToken(refreshToken);
-        token.setExpiresAt(expiresAt);
+        token.updateTokens(accessToken, refreshToken, expiresAt);
         tokenRepository.save(token);
     }
 

@@ -10,7 +10,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "progress_photos")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

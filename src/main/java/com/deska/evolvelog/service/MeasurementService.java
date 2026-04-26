@@ -54,16 +54,9 @@ public class MeasurementService {
     @Transactional
     public Measurement update(UUID id, UUID userId, UpdateMeasurementRequest request) {
         Measurement measurement = findById(id, userId);
-        if (request.date() != null) measurement.setDate(request.date());
-        if (request.weightKg() != null) measurement.setWeightKg(request.weightKg());
-        if (request.bodyFatPercent() != null) measurement.setBodyFatPercent(request.bodyFatPercent());
-        if (request.chestCm() != null) measurement.setChestCm(request.chestCm());
-        if (request.waistNarrowestCm() != null) measurement.setWaistNarrowestCm(request.waistNarrowestCm());
-        if (request.waistNavelCm() != null) measurement.setWaistNavelCm(request.waistNavelCm());
-        if (request.bicepsCm() != null) measurement.setBicepsCm(request.bicepsCm());
-        if (request.thighCm() != null) measurement.setThighCm(request.thighCm());
-        if (request.calvesCm() != null) measurement.setCalvesCm(request.calvesCm());
-        if (request.notes() != null) measurement.setNotes(request.notes());
+        measurement.applyPatch(request.date(), request.weightKg(), request.bodyFatPercent(),
+                request.chestCm(), request.waistNarrowestCm(), request.waistNavelCm(),
+                request.bicepsCm(), request.thighCm(), request.calvesCm(), request.notes());
         return measurementRepository.save(measurement);
     }
 

@@ -10,7 +10,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "exercises")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -48,5 +47,14 @@ public class Exercise {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public void applyPatch(String name, Integer sets, Integer reps, BigDecimal weightKg, String notes, Integer position) {
+        if (name != null) this.name = name;
+        if (sets != null) this.sets = sets;
+        if (reps != null) this.reps = reps;
+        if (weightKg != null) this.weightKg = weightKg;
+        if (notes != null) this.notes = notes;
+        if (position != null) this.position = position;
     }
 }

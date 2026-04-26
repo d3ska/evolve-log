@@ -15,7 +15,7 @@ public class UserService {
 
     @Transactional
     public User updatePreferences(User user, UpdateUserPreferencesRequest request) {
-        user.setUnitSystem(request.unitSystem());
+        user.updatePreferences(request.unitSystem());
         return userRepository.save(user);
     }
 }

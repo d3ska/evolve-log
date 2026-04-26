@@ -74,12 +74,12 @@ public class WorkoutController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(
+    public ResponseEntity<Void> delete(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
 
         workoutService.delete(id, user.getId());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/exercises")
@@ -105,12 +105,12 @@ public class WorkoutController {
     }
 
     @DeleteMapping("/{id}/exercises/{exerciseId}")
-    public ResponseEntity<ApiResponse<Void>> deleteExercise(
+    public ResponseEntity<Void> deleteExercise(
             @PathVariable UUID id,
             @PathVariable UUID exerciseId,
             @AuthenticationPrincipal User user) {
 
         workoutService.deleteExercise(id, exerciseId, user.getId());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.noContent().build();
     }
 }

@@ -16,7 +16,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -76,5 +75,14 @@ public class User implements UserDetails, Serializable {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    public void updateOidcInfo(String googleSub, String name) {
+        this.googleSub = googleSub;
+        this.name = name;
+    }
+
+    public void updatePreferences(UnitSystem unitSystem) {
+        this.unitSystem = unitSystem;
     }
 }

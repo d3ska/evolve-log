@@ -10,7 +10,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "supplement_logs")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

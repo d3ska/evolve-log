@@ -9,7 +9,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "withings_tokens")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -51,5 +50,11 @@ public class WithingsToken {
 
     public boolean isExpired() {
         return OffsetDateTime.now().isAfter(expiresAt.minusMinutes(5));
+    }
+
+    public void updateTokens(String accessToken, String refreshToken, OffsetDateTime expiresAt) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.expiresAt = expiresAt;
     }
 }

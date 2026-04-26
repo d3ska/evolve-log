@@ -11,7 +11,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "workout_sessions")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -48,5 +47,12 @@ public class WorkoutSession {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public void applyPatch(LocalDateTime date, Integer durationMinutes, String notes, TrainingPlan trainingPlan) {
+        if (date != null) this.date = date;
+        if (durationMinutes != null) this.durationMinutes = durationMinutes;
+        if (notes != null) this.notes = notes;
+        if (trainingPlan != null) this.trainingPlan = trainingPlan;
     }
 }

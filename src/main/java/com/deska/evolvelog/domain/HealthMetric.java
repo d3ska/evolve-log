@@ -11,7 +11,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "health_metrics")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

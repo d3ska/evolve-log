@@ -60,11 +60,11 @@ public class BloodTestController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(
+    public ResponseEntity<Void> delete(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
 
         bloodTestService.delete(id, user.getId());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.noContent().build();
     }
 }

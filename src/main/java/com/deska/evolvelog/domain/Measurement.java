@@ -11,7 +11,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "measurements")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -61,5 +60,20 @@ public class Measurement {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public void applyPatch(LocalDate date, BigDecimal weightKg, BigDecimal bodyFatPercent,
+                           BigDecimal chestCm, BigDecimal waistNarrowestCm, BigDecimal waistNavelCm,
+                           BigDecimal bicepsCm, BigDecimal thighCm, BigDecimal calvesCm, String notes) {
+        if (date != null) this.date = date;
+        if (weightKg != null) this.weightKg = weightKg;
+        if (bodyFatPercent != null) this.bodyFatPercent = bodyFatPercent;
+        if (chestCm != null) this.chestCm = chestCm;
+        if (waistNarrowestCm != null) this.waistNarrowestCm = waistNarrowestCm;
+        if (waistNavelCm != null) this.waistNavelCm = waistNavelCm;
+        if (bicepsCm != null) this.bicepsCm = bicepsCm;
+        if (thighCm != null) this.thighCm = thighCm;
+        if (calvesCm != null) this.calvesCm = calvesCm;
+        if (notes != null) this.notes = notes;
     }
 }

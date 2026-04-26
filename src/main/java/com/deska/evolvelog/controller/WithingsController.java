@@ -74,10 +74,10 @@ public class WithingsController {
     }
 
     @DeleteMapping("/api/withings/connection")
-    public ResponseEntity<ApiResponse<Void>> disconnect(
+    public ResponseEntity<Void> disconnect(
             @AuthenticationPrincipal User user) {
 
         withingsService.disconnect(user);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.noContent().build();
     }
 }

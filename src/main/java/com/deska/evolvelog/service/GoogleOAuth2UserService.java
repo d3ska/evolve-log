@@ -32,8 +32,7 @@ public class GoogleOAuth2UserService extends OidcUserService {
                                 .email(email)
                                 .build()));
 
-        user.setGoogleSub(googleSub);
-        user.setName(name);
+        user.updateOidcInfo(googleSub, name);
         User savedUser = userRepository.save(user);
 
         return new CustomOidcUser(savedUser, oidcUser);
