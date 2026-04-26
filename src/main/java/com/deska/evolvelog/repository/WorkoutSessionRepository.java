@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, UUID> {
+    @EntityGraph(attributePaths = {"exercises"})
     Page<WorkoutSession> findByUserIdOrderByDateDesc(UUID userId, Pageable pageable);
     List<WorkoutSession> findByUserIdAndDateBetweenOrderByDateAsc(UUID userId, LocalDateTime start, LocalDateTime end);
 

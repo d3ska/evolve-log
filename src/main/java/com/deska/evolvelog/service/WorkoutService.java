@@ -9,6 +9,7 @@ import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
@@ -27,13 +28,16 @@ public class WorkoutService {
     private final WorkoutSessionRepository sessionRepository;
     private final ExerciseRepository exerciseRepository;
     private final TrainingPlanRepository trainingPlanRepository;
+    private final ExerciseDefinitionRepository definitionRepository;
 
     public WorkoutService(WorkoutSessionRepository sessionRepository,
                           ExerciseRepository exerciseRepository,
-                          TrainingPlanRepository trainingPlanRepository) {
+                          TrainingPlanRepository trainingPlanRepository,
+                          ExerciseDefinitionRepository definitionRepository) {
         this.sessionRepository = sessionRepository;
         this.exerciseRepository = exerciseRepository;
         this.trainingPlanRepository = trainingPlanRepository;
+        this.definitionRepository = definitionRepository;
     }
 
     @Transactional
@@ -90,6 +94,8 @@ public class WorkoutService {
                 ? request.position()
                 : exerciseRepository.countByWorkoutSessionId(sessionId);
 
+        String primaryMuscle = resolvePrimaryMuscle(request.exerciseDefinitionId());
+
         Exercise exercise = Exercise.builder()
                 .workoutSession(session)
                 .name(request.name())
@@ -98,6 +104,9 @@ public class WorkoutService {
                 .weightKg(request.weightKg())
                 .notes(request.notes())
                 .position(position)
+                .exerciseDefinitionId(request.exerciseDefinitionId())
+                .rpe(request.rpe())
+                .primaryMuscle(primaryMuscle)
                 .build();
 
         return exerciseRepository.save(exercise);
@@ -110,8 +119,12 @@ public class WorkoutService {
         Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
 
+        String primaryMuscle = request.exerciseDefinitionId() != null
+                ? resolvePrimaryMuscle(request.exerciseDefinitionId())
+                : null;
         exercise.applyPatch(request.name(), request.sets(), request.reps(),
-                request.weightKg(), request.notes(), request.position());
+                request.weightKg(), request.notes(), request.position(),
+                request.exerciseDefinitionId(), request.rpe(), primaryMuscle);
 
         return exerciseRepository.save(exercise);
     }
@@ -124,6 +137,13 @@ public class WorkoutService {
         exerciseRepository.delete(exercise);
     }
 
+    private String resolvePrimaryMuscle(java.util.UUID definitionId) {
+        if (definitionId == null) return null;
+        return definitionRepository.findById(definitionId)
+                .map(com.deska.evolvelog.domain.ExerciseDefinition::getPrimaryMuscle)
+                .orElse(null);
+    }
+
     private TrainingPlan resolveTrainingPlan(UUID planId, UUID userId) {
         if (planId == null) return null;
         return trainingPlanRepository.findByIdAndUserId(planId, userId)
@@ -134,6 +154,7 @@ public class WorkoutService {
         List<Exercise> exercises = new ArrayList<>();
         for (int i = 0; i < requests.size(); i++) {
             CreateExerciseRequest req = requests.get(i);
+            String primaryMuscle = resolvePrimaryMuscle(req.exerciseDefinitionId());
             exercises.add(Exercise.builder()
                     .workoutSession(session)
                     .name(req.name())
@@ -142,6 +163,9 @@ public class WorkoutService {
                     .weightKg(req.weightKg())
                     .notes(req.notes())
                     .position(req.position() != null ? req.position() : i)
+                    .exerciseDefinitionId(req.exerciseDefinitionId())
+                    .rpe(req.rpe())
+                    .primaryMuscle(primaryMuscle)
                     .build());
         }
         return exercises;

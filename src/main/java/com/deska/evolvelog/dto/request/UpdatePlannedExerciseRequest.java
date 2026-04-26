@@ -3,6 +3,8 @@ package com.deska.evolvelog.dto.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 public record UpdatePlannedExerciseRequest(
         @Size(max = 100, message = "Name must be at most 100 characters")
         String name,
@@ -21,5 +23,7 @@ public record UpdatePlannedExerciseRequest(
 
         Integer position,
 
-        String notes
+        String notes,
+
+        UUID exerciseDefinitionId
 ) {}

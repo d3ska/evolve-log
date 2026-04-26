@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class EvolveLogApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(EvolveLogApplication.class, args);
     }
 

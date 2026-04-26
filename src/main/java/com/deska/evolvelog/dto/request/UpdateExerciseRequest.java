@@ -21,5 +21,11 @@ public record UpdateExerciseRequest(
 
         String notes,
 
-        Integer position
+        Integer position,
+
+        java.util.UUID exerciseDefinitionId,
+
+        @jakarta.validation.constraints.DecimalMin(value = "1.0", message = "RPE must be between 1.0 and 10.0")
+        @jakarta.validation.constraints.DecimalMax(value = "10.0", message = "RPE must be between 1.0 and 10.0")
+        java.math.BigDecimal rpe
 ) {}

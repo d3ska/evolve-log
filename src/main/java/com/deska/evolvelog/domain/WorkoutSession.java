@@ -33,6 +33,12 @@ public class WorkoutSession {
 
     private Integer durationMinutes;
 
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "finished_at")
+    private LocalDateTime finishedAt;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
@@ -54,5 +60,10 @@ public class WorkoutSession {
         if (durationMinutes != null) this.durationMinutes = durationMinutes;
         if (notes != null) this.notes = notes;
         if (trainingPlan != null) this.trainingPlan = trainingPlan;
+    }
+
+    public void finish(LocalDateTime finishedAt, Integer durationMinutes) {
+        this.finishedAt = finishedAt;
+        if (durationMinutes != null) this.durationMinutes = durationMinutes;
     }
 }

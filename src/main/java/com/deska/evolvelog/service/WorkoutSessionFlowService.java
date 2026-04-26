@@ -1,0 +1,122 @@
+package com.deska.evolvelog.service;
+
+import com.deska.evolvelog.domain.Exercise;
+import com.deska.evolvelog.domain.ExerciseDefinition;
+import com.deska.evolvelog.domain.PlannedExercise;
+import com.deska.evolvelog.domain.TrainingPlan;
+import com.deska.evolvelog.domain.User;
+import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.dto.response.FinishedSessionDto;
+import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
+import com.deska.evolvelog.dto.response.WorkoutSessionDto;
+import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
+import com.deska.evolvelog.repository.TrainingPlanRepository;
+import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class WorkoutSessionFlowService {
+
+    private final TrainingPlanRepository planRepository;
+    private final WorkoutSessionRepository sessionRepository;
+    private final ExerciseDefinitionRepository definitionRepository;
+    private final TrainingVolumeService volumeService;
+
+    @Transactional
+    public WorkoutSession startFromPlan(User user, UUID trainingPlanId) {
+        TrainingPlan plan = planRepository.findByIdAndUserId(trainingPlanId, user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("TrainingPlan", trainingPlanId));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        WorkoutSession session = WorkoutSession.builder()
+                .user(user)
+                .trainingPlan(plan)
+                .date(now)
+                .startedAt(now)
+                .build();
+
+        List<PlannedExercise> plannedExercises = plan.getPlannedExercises();
+        if (!plannedExercises.isEmpty()) {
+            Map<UUID, ExerciseDefinition> definitions = loadDefinitions(plannedExercises);
+            List<Exercise> exercises = new ArrayList<>();
+            for (PlannedExercise pe : plannedExercises) {
+                ExerciseDefinition def = pe.getExerciseDefinitionId() != null
+                        ? definitions.get(pe.getExerciseDefinitionId())
+                        : null;
+                exercises.add(Exercise.builder()
+                        .workoutSession(session)
+                        .name(pe.getName())
+                        .sets(pe.getSets())
+                        .reps(null)
+                        .weightKg(null)
+                        .position(pe.getPosition())
+                        .exerciseDefinitionId(pe.getExerciseDefinitionId())
+                        .primaryMuscle(def != null ? def.getPrimaryMuscle() : null)
+                        .build());
+            }
+            session.getExercises().addAll(exercises);
+        }
+
+        return sessionRepository.save(session);
+    }
+
+    @Transactional
+    public FinishedSessionDto finishSession(UUID sessionId, UUID userId) {
+        WorkoutSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", sessionId));
+
+        if (session.getFinishedAt() == null) {
+            LocalDateTime finishedAt = LocalDateTime.now();
+            Integer duration = session.getStartedAt() != null
+                    ? (int) ChronoUnit.MINUTES.between(session.getStartedAt(), finishedAt)
+                    : session.getDurationMinutes();
+            session.finish(finishedAt, duration);
+            session = sessionRepository.save(session);
+        }
+
+        SessionVolumeSummaryDto volume = computeVolumeSummary(session, userId);
+        return new FinishedSessionDto(WorkoutSessionDto.from(session), volume);
+    }
+
+    private Map<UUID, ExerciseDefinition> loadDefinitions(List<PlannedExercise> plannedExercises) {
+        List<UUID> ids = plannedExercises.stream()
+                .map(PlannedExercise::getExerciseDefinitionId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+
+        return definitionRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(ExerciseDefinition::getId, Function.identity()));
+    }
+
+    private SessionVolumeSummaryDto computeVolumeSummary(WorkoutSession session, UUID userId) {
+        List<Exercise> exercises = session.getExercises();
+        if (exercises.isEmpty()) {
+            return new SessionVolumeSummaryDto(session.getId(), BigDecimal.ZERO, BigDecimal.ZERO, 0.0, 0, List.of());
+        }
+        boolean hasNullReps = exercises.stream().anyMatch(e -> e.getReps() == null);
+        if (hasNullReps) {
+            return new SessionVolumeSummaryDto(session.getId(), BigDecimal.ZERO, BigDecimal.ZERO, 0.0, exercises.size(), List.of());
+        }
+        return volumeService.getSessionVolumeSummary(session.getId(), userId);
+    }
+}

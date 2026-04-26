@@ -40,7 +40,7 @@ public class TrainingPlanController {
             @AuthenticationPrincipal User user
     ) {
         List<TrainingPlanDto> plans = planService.findAll(user.getId()).stream()
-                .map(TrainingPlanDto::summary)
+                .map(TrainingPlanDto::from)
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(plans));
     }

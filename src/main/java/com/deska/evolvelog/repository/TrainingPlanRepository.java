@@ -12,6 +12,7 @@ import java.util.UUID;
 
 public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, UUID> {
 
+    @EntityGraph(attributePaths = {"plannedExercises"})
     List<TrainingPlan> findByUserIdOrderByCreatedAtAsc(UUID userId);
 
     @EntityGraph(attributePaths = {"plannedExercises"})

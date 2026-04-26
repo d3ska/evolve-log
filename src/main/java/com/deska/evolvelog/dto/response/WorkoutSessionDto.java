@@ -13,7 +13,9 @@ public record WorkoutSessionDto(
         String notes,
         UUID trainingPlanId,
         List<ExerciseDto> exercises,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime startedAt,
+        LocalDateTime finishedAt
 ) {
     public static WorkoutSessionDto from(WorkoutSession session) {
         return new WorkoutSessionDto(
@@ -23,7 +25,9 @@ public record WorkoutSessionDto(
                 session.getNotes(),
                 session.getTrainingPlan() != null ? session.getTrainingPlan().getId() : null,
                 session.getExercises().stream().map(ExerciseDto::from).toList(),
-                session.getCreatedAt()
+                session.getCreatedAt(),
+                session.getStartedAt(),
+                session.getFinishedAt()
         );
     }
 
@@ -35,7 +39,9 @@ public record WorkoutSessionDto(
                 session.getNotes(),
                 session.getTrainingPlan() != null ? session.getTrainingPlan().getId() : null,
                 List.of(),
-                session.getCreatedAt()
+                session.getCreatedAt(),
+                session.getStartedAt(),
+                session.getFinishedAt()
         );
     }
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 public record CreatePlannedExerciseRequest(
         @NotBlank(message = "Name is required")
         @Size(max = 100, message = "Name must be at most 100 characters")
@@ -27,5 +29,7 @@ public record CreatePlannedExerciseRequest(
 
         Integer position,
 
-        String notes
+        String notes,
+
+        UUID exerciseDefinitionId
 ) {}

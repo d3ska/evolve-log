@@ -42,6 +42,9 @@ public class PlannedExercise {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "exercise_definition_id")
+    private UUID exerciseDefinitionId;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -51,7 +54,7 @@ public class PlannedExercise {
     }
 
     public void applyPatch(String name, Integer sets, Integer repsMin, Integer repsMax,
-                           Integer restSeconds, Integer position, String notes) {
+                           Integer restSeconds, Integer position, String notes, UUID exerciseDefinitionId) {
         if (name != null) this.name = name;
         if (sets != null) this.sets = sets;
         if (repsMin != null) this.repsMin = repsMin;
@@ -59,5 +62,6 @@ public class PlannedExercise {
         if (restSeconds != null) this.restSeconds = restSeconds;
         if (position != null) this.position = position;
         if (notes != null) this.notes = notes;
+        if (exerciseDefinitionId != null) this.exerciseDefinitionId = exerciseDefinitionId;
     }
 }

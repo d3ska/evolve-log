@@ -6,11 +6,14 @@ import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.request.CreateExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
+import com.deska.evolvelog.dto.request.StartWorkoutSessionRequest;
 import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.response.ExerciseDto;
+import com.deska.evolvelog.dto.response.FinishedSessionDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
 import com.deska.evolvelog.service.WorkoutService;
+import com.deska.evolvelog.service.WorkoutSessionFlowService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -26,9 +29,11 @@ import java.util.UUID;
 public class WorkoutController {
 
     private final WorkoutService workoutService;
+    private final WorkoutSessionFlowService flowService;
 
-    public WorkoutController(WorkoutService workoutService) {
+    public WorkoutController(WorkoutService workoutService, WorkoutSessionFlowService flowService) {
         this.workoutService = workoutService;
+        this.flowService = flowService;
     }
 
     @PostMapping
@@ -49,7 +54,7 @@ public class WorkoutController {
 
         Page<WorkoutSession> sessions = workoutService.findAll(user.getId(), page, size);
         List<WorkoutSessionDto> dtos = sessions.getContent().stream()
-                .map(WorkoutSessionDto::summary)
+                .map(WorkoutSessionDto::from)
                 .toList();
         return ResponseEntity.ok(ApiResponse.paged(dtos, sessions.getTotalElements(), page, size));
     }
@@ -112,5 +117,24 @@ public class WorkoutController {
 
         workoutService.deleteExercise(id, exerciseId, user.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/sessions/start")
+    public ResponseEntity<ApiResponse<WorkoutSessionDto>> startSession(
+            @Valid @RequestBody StartWorkoutSessionRequest request,
+            @AuthenticationPrincipal User user) {
+
+        WorkoutSession session = flowService.startFromPlan(user, request.trainingPlanId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(WorkoutSessionDto.from(session)));
+    }
+
+    @PostMapping("/sessions/{id}/finish")
+    public ResponseEntity<ApiResponse<FinishedSessionDto>> finishSession(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+
+        FinishedSessionDto result = flowService.finishSession(id, user.getId());
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

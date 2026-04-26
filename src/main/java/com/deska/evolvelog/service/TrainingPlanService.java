@@ -1,5 +1,6 @@
 package com.deska.evolvelog.service;
 
+import com.deska.evolvelog.domain.ExerciseDefinition;
 import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
@@ -8,9 +9,11 @@ import com.deska.evolvelog.dto.request.CreateTrainingPlanRequest;
 import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.PlannedExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +21,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TrainingPlanService {
 
     private final TrainingPlanRepository planRepository;
     private final PlannedExerciseRepository exerciseRepository;
+    private final ExerciseDefinitionRepository definitionRepository;
 
     @Transactional
     public TrainingPlan create(User user, CreateTrainingPlanRequest request) {
@@ -45,7 +50,9 @@ public class TrainingPlanService {
 
     @Transactional(readOnly = true)
     public List<TrainingPlan> findAll(UUID userId) {
-        return planRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        var result = planRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        log.info(result.toString());
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +81,8 @@ public class TrainingPlanService {
                 ? request.position()
                 : exerciseRepository.countByTrainingPlanId(planId);
 
+        UUID definitionId = resolveDefinitionId(request.exerciseDefinitionId(), userId);
+
         PlannedExercise exercise = PlannedExercise.builder()
                 .trainingPlan(plan)
                 .name(request.name())
@@ -83,6 +92,7 @@ public class TrainingPlanService {
                 .restSeconds(request.restSeconds())
                 .position(position)
                 .notes(request.notes())
+                .exerciseDefinitionId(definitionId)
                 .build();
 
         return exerciseRepository.save(exercise);
@@ -95,8 +105,9 @@ public class TrainingPlanService {
         PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
 
+        UUID definitionId = resolveDefinitionId(request.exerciseDefinitionId(), userId);
         exercise.applyPatch(request.name(), request.sets(), request.repsMin(), request.repsMax(),
-                request.restSeconds(), request.position(), request.notes());
+                request.restSeconds(), request.position(), request.notes(), definitionId);
 
         return exerciseRepository.save(exercise);
     }
@@ -111,8 +122,10 @@ public class TrainingPlanService {
 
     private List<PlannedExercise> buildExercises(List<CreatePlannedExerciseRequest> requests, TrainingPlan plan) {
         List<PlannedExercise> exercises = new ArrayList<>();
+        UUID userId = plan.getUser().getId();
         for (int i = 0; i < requests.size(); i++) {
             CreatePlannedExerciseRequest req = requests.get(i);
+            UUID definitionId = resolveDefinitionId(req.exerciseDefinitionId(), userId);
             exercises.add(PlannedExercise.builder()
                     .trainingPlan(plan)
                     .name(req.name())
@@ -122,8 +135,18 @@ public class TrainingPlanService {
                     .restSeconds(req.restSeconds())
                     .position(req.position() != null ? req.position() : i)
                     .notes(req.notes())
+                    .exerciseDefinitionId(definitionId)
                     .build());
         }
         return exercises;
+    }
+
+    private UUID resolveDefinitionId(UUID requestedId, UUID userId) {
+        if (requestedId == null) {
+            return null;
+        }
+        definitionRepository.findByIdAccessibleToUser(requestedId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("ExerciseDefinition", requestedId));
+        return requestedId;
     }
 }

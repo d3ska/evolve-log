@@ -12,7 +12,8 @@ public record PlannedExerciseDto(
         Integer repsMax,
         Integer restSeconds,
         Integer position,
-        String notes
+        String notes,
+        UUID exerciseDefinitionId
 ) {
     public static PlannedExerciseDto from(PlannedExercise e) {
         return new PlannedExerciseDto(
@@ -23,7 +24,8 @@ public record PlannedExerciseDto(
                 e.getRepsMax(),
                 e.getRestSeconds(),
                 e.getPosition(),
-                e.getNotes()
+                e.getNotes(),
+                e.getExerciseDefinitionId()
         );
     }
 }

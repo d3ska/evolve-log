@@ -3,7 +3,9 @@ package com.deska.evolvelog.repository;
 import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.dto.response.ExerciseProgressPointDto;
 import com.deska.evolvelog.dto.response.PersonalRecordDto;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -116,4 +118,74 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
             ORDER BY e.name ASC
             """)
     List<String> findDistinctExerciseNamesByUserId(@Param("userId") UUID userId);
+
+    // Volume analytics: all exercises for a session (owner-checked via join)
+    @Query("""
+            SELECT e FROM Exercise e
+            JOIN FETCH e.workoutSession ws
+            WHERE ws.id = :sessionId
+              AND ws.user.id = :userId
+            """)
+    List<Exercise> findBySessionIdAndUserId(@Param("sessionId") UUID sessionId,
+                                            @Param("userId") UUID userId);
+
+    // Weekly volume aggregation by muscle group — native query for DATE_TRUNC
+    @Query(value = """
+            SELECT DATE_TRUNC('week', ws.date)::date AS week_start,
+                   e.primary_muscle                  AS muscle,
+                   SUM(e.sets * e.reps * e.weight_kg) AS volume_load,
+                   COUNT(DISTINCT ws.id)              AS session_count
+            FROM exercises e
+            JOIN workout_sessions ws ON e.workout_session_id = ws.id
+            WHERE ws.user_id       = :userId
+              AND e.primary_muscle IS NOT NULL
+              AND e.weight_kg      IS NOT NULL
+              AND ws.date BETWEEN :from AND :to
+              AND (:muscle IS NULL OR e.primary_muscle = :muscle)
+            GROUP BY week_start, e.primary_muscle
+            ORDER BY week_start ASC, e.primary_muscle ASC
+            """, nativeQuery = true)
+    List<WeeklyVolumeRow> findWeeklyVolumeByMuscle(
+            @Param("userId") UUID userId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("muscle") String muscle);
+
+    // Progressive overload: last N sessions for a (userId, exerciseDefinitionId) pair
+    @Query("""
+            SELECT e FROM Exercise e
+            JOIN FETCH e.workoutSession ws
+            WHERE ws.user.id = :userId
+              AND e.exerciseDefinitionId = :definitionId
+            ORDER BY ws.date DESC
+            """)
+    List<Exercise> findByUserIdAndDefinitionId(
+            @Param("userId") UUID userId,
+            @Param("definitionId") UUID definitionId,
+            Pageable pageable);
+
+    // Auto-link: exercises with no definition linked for a user
+    @Query("""
+            SELECT e FROM Exercise e
+            JOIN e.workoutSession ws
+            WHERE ws.user.id = :userId
+              AND e.exerciseDefinitionId IS NULL
+            """)
+    List<Exercise> findUnlinkedByUserId(@Param("userId") UUID userId);
+
+    // Auto-link: bulk update exercise_definition_id and primary_muscle by name match
+    @Modifying
+    @Query(value = """
+            UPDATE exercises e
+            SET exercise_definition_id = d.id,
+                primary_muscle         = d.primary_muscle
+            FROM exercise_definitions d
+            WHERE LOWER(e.name) = LOWER(d.name)
+              AND d.is_system = true
+              AND e.exercise_definition_id IS NULL
+              AND e.workout_session_id IN (
+                  SELECT id FROM workout_sessions WHERE user_id = :userId
+              )
+            """, nativeQuery = true)
+    int bulkAutoLinkByUserId(@Param("userId") UUID userId);
 }
