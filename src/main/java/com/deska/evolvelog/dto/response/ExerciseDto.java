@@ -3,6 +3,7 @@ package com.deska.evolvelog.dto.response;
 import com.deska.evolvelog.domain.Exercise;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record ExerciseDto(
@@ -12,9 +13,13 @@ public record ExerciseDto(
         Integer reps,
         BigDecimal weightKg,
         String notes,
-        Integer position
+        Integer position,
+        List<WorkoutSetDto> workoutSets
 ) {
     public static ExerciseDto from(Exercise e) {
+        List<WorkoutSetDto> setDtos = e.getWorkoutSets().stream()
+                .map(WorkoutSetDto::from)
+                .toList();
         return new ExerciseDto(
                 e.getId(),
                 e.getName(),
@@ -22,7 +27,8 @@ public record ExerciseDto(
                 e.getReps(),
                 e.getWeightKg(),
                 e.getNotes(),
-                e.getPosition()
+                e.getPosition(),
+                setDtos
         );
     }
 }

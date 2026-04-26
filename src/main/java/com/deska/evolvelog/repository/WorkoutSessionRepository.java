@@ -14,11 +14,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, UUID> {
-    @EntityGraph(attributePaths = {"exercises"})
     Page<WorkoutSession> findByUserIdOrderByDateDesc(UUID userId, Pageable pageable);
     List<WorkoutSession> findByUserIdAndDateBetweenOrderByDateAsc(UUID userId, LocalDateTime start, LocalDateTime end);
 
-    // Eagerly loads exercises to avoid LazyInitializationException in detail view
+    // Eagerly loads exercises and their per-set data
     @EntityGraph(attributePaths = {"exercises"})
     @Query("SELECT s FROM WorkoutSession s WHERE s.id = :id AND s.user.id = :userId")
     Optional<WorkoutSession> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);

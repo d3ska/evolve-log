@@ -51,9 +51,11 @@ public class ProgressiveOverloadService {
         List<OverloadHistoryEntryDto> entries = new ArrayList<>(ascList.size());
 
         for (Exercise e : ascList) {
-            BigDecimal e1rm = VolumeCalculator.epleyE1RM(e.getWeightKg(), e.getReps());
+            Integer reps = e.getReps();
+            Integer sets = e.getSets();
+            BigDecimal e1rm = (reps != null) ? VolumeCalculator.epleyE1RM(e.getWeightKg(), reps) : null;
             BigDecimal performanceIndicator = e1rm != null ? e1rm : e.getWeightKg();
-            BigDecimal vl = VolumeCalculator.volumeLoad(e.getSets(), e.getReps(), e.getWeightKg());
+            BigDecimal vl = (sets != null && reps != null) ? VolumeCalculator.volumeLoad(sets, reps, e.getWeightKg()) : null;
 
             boolean isPR;
             if (runningMaxE1rm == null) {

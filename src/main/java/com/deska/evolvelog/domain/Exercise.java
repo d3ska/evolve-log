@@ -2,9 +2,13 @@ package com.deska.evolvelog.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -48,6 +52,12 @@ public class Exercise {
 
     @Column(name = "primary_muscle", length = 50)
     private String primaryMuscle;
+
+    @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("setNumber ASC")
+    @Fetch(FetchMode.SUBSELECT)
+    @Builder.Default
+    private List<WorkoutSet> workoutSets = new ArrayList<>();
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

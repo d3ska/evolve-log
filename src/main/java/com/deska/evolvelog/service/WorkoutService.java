@@ -4,15 +4,18 @@ import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.request.CreateExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
+import com.deska.evolvelog.dto.response.WorkoutSessionDto;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import com.deska.evolvelog.repository.WorkoutSetRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -29,15 +32,18 @@ public class WorkoutService {
     private final ExerciseRepository exerciseRepository;
     private final TrainingPlanRepository trainingPlanRepository;
     private final ExerciseDefinitionRepository definitionRepository;
+    private final WorkoutSetRepository workoutSetRepository;
 
     public WorkoutService(WorkoutSessionRepository sessionRepository,
                           ExerciseRepository exerciseRepository,
                           TrainingPlanRepository trainingPlanRepository,
-                          ExerciseDefinitionRepository definitionRepository) {
+                          ExerciseDefinitionRepository definitionRepository,
+                          WorkoutSetRepository workoutSetRepository) {
         this.sessionRepository = sessionRepository;
         this.exerciseRepository = exerciseRepository;
         this.trainingPlanRepository = trainingPlanRepository;
         this.definitionRepository = definitionRepository;
+        this.workoutSetRepository = workoutSetRepository;
     }
 
     @Transactional
@@ -61,8 +67,9 @@ public class WorkoutService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSession> findAll(UUID userId, int page, int size) {
-        return sessionRepository.findByUserIdOrderByDateDesc(userId, PageRequest.of(page, size));
+    public Page<WorkoutSessionDto> findAll(UUID userId, int page, int size) {
+        return sessionRepository.findByUserIdOrderByDateDesc(userId, PageRequest.of(page, size))
+                .map(WorkoutSessionDto::from);
     }
 
     @Transactional(readOnly = true)
@@ -127,6 +134,19 @@ public class WorkoutService {
                 request.exerciseDefinitionId(), request.rpe(), primaryMuscle);
 
         return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public WorkoutSet updateSet(UUID sessionId, UUID exerciseId, int setNumber, UUID userId,
+                                Integer reps, java.math.BigDecimal weightKg) {
+        // Verify session ownership
+        findById(sessionId, userId);
+        WorkoutSet ws = workoutSetRepository
+                .findByExerciseIdAndSetNumberAndUserId(exerciseId, setNumber, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSet",
+                        exerciseId + "/" + setNumber));
+        ws.update(reps, weightKg);
+        return workoutSetRepository.save(ws);
     }
 
     @Transactional

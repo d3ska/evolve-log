@@ -3,6 +3,7 @@ package com.deska.evolvelog.controller;
 import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.request.CreateExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
@@ -12,6 +13,7 @@ import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.response.ExerciseDto;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
+import com.deska.evolvelog.dto.response.WorkoutSetDto;
 import com.deska.evolvelog.service.WorkoutService;
 import com.deska.evolvelog.service.WorkoutSessionFlowService;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,11 +55,8 @@ public class WorkoutController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Page<WorkoutSession> sessions = workoutService.findAll(user.getId(), page, size);
-        List<WorkoutSessionDto> dtos = sessions.getContent().stream()
-                .map(WorkoutSessionDto::from)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.paged(dtos, sessions.getTotalElements(), page, size));
+        Page<WorkoutSessionDto> sessions = workoutService.findAll(user.getId(), page, size);
+        return ResponseEntity.ok(ApiResponse.paged(sessions.getContent(), sessions.getTotalElements(), page, size));
     }
 
     @GetMapping("/{id}")
@@ -118,6 +118,21 @@ public class WorkoutController {
         workoutService.deleteExercise(id, exerciseId, user.getId());
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/exercises/{exerciseId}/sets/{setNumber}")
+    public ResponseEntity<ApiResponse<WorkoutSetDto>> updateSet(
+            @PathVariable UUID id,
+            @PathVariable UUID exerciseId,
+            @PathVariable int setNumber,
+            @RequestBody UpdateSetRequest request,
+            @AuthenticationPrincipal User user) {
+
+        WorkoutSet ws = workoutService.updateSet(id, exerciseId, setNumber, user.getId(),
+                request.reps(), request.weightKg());
+        return ResponseEntity.ok(ApiResponse.success(WorkoutSetDto.from(ws)));
+    }
+
+    record UpdateSetRequest(Integer reps, BigDecimal weightKg) {}
 
     @PostMapping("/sessions/start")
     public ResponseEntity<ApiResponse<WorkoutSessionDto>> startSession(

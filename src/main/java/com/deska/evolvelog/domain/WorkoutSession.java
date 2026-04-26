@@ -2,6 +2,7 @@ package com.deska.evolvelog.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class WorkoutSession {
     @Builder.Default
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
+    @BatchSize(size = 20)
     private List<Exercise> exercises = new ArrayList<>();
 
     @Column(nullable = false)

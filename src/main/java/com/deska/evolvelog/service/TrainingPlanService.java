@@ -149,4 +149,5 @@ public class TrainingPlanService {
                 .orElseThrow(() -> new ResourceNotFoundException("ExerciseDefinition", requestedId));
         return requestedId;
     }
+
 }

@@ -6,6 +6,7 @@ import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
@@ -58,7 +59,7 @@ public class WorkoutSessionFlowService {
                 ExerciseDefinition def = pe.getExerciseDefinitionId() != null
                         ? definitions.get(pe.getExerciseDefinitionId())
                         : null;
-                exercises.add(Exercise.builder()
+                Exercise exercise = Exercise.builder()
                         .workoutSession(session)
                         .name(pe.getName())
                         .sets(pe.getSets())
@@ -67,7 +68,14 @@ public class WorkoutSessionFlowService {
                         .position(pe.getPosition())
                         .exerciseDefinitionId(pe.getExerciseDefinitionId())
                         .primaryMuscle(def != null ? def.getPrimaryMuscle() : null)
-                        .build());
+                        .build();
+                for (int i = 1; i <= pe.getSets(); i++) {
+                    exercise.getWorkoutSets().add(WorkoutSet.builder()
+                            .exercise(exercise)
+                            .setNumber(i)
+                            .build());
+                }
+                exercises.add(exercise);
             }
             session.getExercises().addAll(exercises);
         }
