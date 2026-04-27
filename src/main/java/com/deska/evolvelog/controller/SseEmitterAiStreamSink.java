@@ -36,7 +36,7 @@ public class SseEmitterAiStreamSink implements AiStreamSink {
 
     @Override
     public void onToken(String text) {
-        send("token", text);
+        send("token", Map.of("t", text));
     }
 
     @Override

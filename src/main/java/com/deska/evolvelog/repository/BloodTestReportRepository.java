@@ -15,4 +15,6 @@ public interface BloodTestReportRepository extends JpaRepository<BloodTestReport
 
     @EntityGraph(attributePaths = {"results"})
     Optional<BloodTestReport> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByUserId(UUID userId);
 }

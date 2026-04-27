@@ -148,6 +148,9 @@ public class AiChatService {
             }
         }
 
+        log.info("Claude raw response (userId={}, conversationId={}):\n---BEGIN---\n{}\n---END---",
+                userId, conversationId, assistantContent);
+
         // Persist both messages only when the AI responded successfully.
         // If the AI call failed (empty response), skip persistence so history stays clean —
         // orphaned user messages with no assistant reply would corrupt future requests.

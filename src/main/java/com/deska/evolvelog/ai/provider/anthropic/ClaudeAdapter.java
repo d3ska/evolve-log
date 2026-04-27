@@ -238,8 +238,10 @@ public class ClaudeAdapter implements AiProvider {
         private void handleContentBlockStop() {
             if (inToolUseBlock && currentToolName != null) {
                 try {
+                    String json = toolInputAccumulator.toString().trim();
+                    if (json.isEmpty()) json = "{}";
                     Map<String, Object> input = objectMapper.readValue(
-                            toolInputAccumulator.toString(),
+                            json,
                             new TypeReference<>() {});
                     // Re-emit tool use with full parsed input so the service can execute it
                     sink.onToolUse(currentToolName, input);
