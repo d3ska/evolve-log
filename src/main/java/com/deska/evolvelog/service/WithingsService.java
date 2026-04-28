@@ -45,11 +45,16 @@ public class WithingsService {
     // ─── OAuth ────────────────────────────────────────────────────────────────
 
     public String buildAuthUrl() {
-        String params = "response_type=code" +
-                "&client_id=" + clientId +
-                "&scope=user.metrics" +
-                "&redirect_uri=" + redirectUri;
-        return "https://account.withings.com/oauth2_user/authorize2?" + params;
+        try {
+            String encodedRedirectUri = java.net.URLEncoder.encode(redirectUri, java.nio.charset.StandardCharsets.UTF_8);
+            String params = "response_type=code" +
+                    "&client_id=" + clientId +
+                    "&scope=user.metrics" +
+                    "&redirect_uri=" + encodedRedirectUri;
+            return "https://account.withings.com/oauth2_user/authorize2?" + params;
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to build Withings auth URL");
+        }
     }
 
     @Transactional
