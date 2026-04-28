@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -136,14 +137,10 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
             SELECT DATE_TRUNC('week', ws.date)::date AS week_start,
                    e.primary_muscle                  AS muscle,
                    SUM(
-                       COALESCE(
-                           CASE WHEN e.reps IS NOT NULL AND e.weight_kg IS NOT NULL
-                                THEN e.sets * e.reps * e.weight_kg END,
-                           (SELECT SUM(s.reps * s.weight_kg)
-                            FROM workout_sets s
-                            WHERE s.exercise_id = e.id
-                              AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL)
-                       )
+                       (SELECT SUM(s.reps * s.weight_kg)
+                        FROM workout_sets s
+                        WHERE s.exercise_id = e.id
+                          AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL)
                    )                                 AS volume_load,
                    COUNT(DISTINCT ws.id)             AS session_count,
                    SUM(e.sets)                       AS set_count
@@ -153,13 +150,10 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
               AND e.primary_muscle IS NOT NULL
               AND ws.date BETWEEN :from AND :to
               AND (:muscle IS NULL OR e.primary_muscle = :muscle)
-              AND (
-                  (e.reps IS NOT NULL AND e.weight_kg IS NOT NULL)
-                  OR EXISTS (
-                      SELECT 1 FROM workout_sets s
-                      WHERE s.exercise_id = e.id
-                        AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
-                  )
+              AND EXISTS (
+                  SELECT 1 FROM workout_sets s
+                  WHERE s.exercise_id = e.id
+                    AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
               )
             GROUP BY week_start, e.primary_muscle
             ORDER BY week_start ASC, e.primary_muscle ASC
@@ -182,6 +176,21 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
             @Param("userId") UUID userId,
             @Param("definitionId") UUID definitionId,
             Pageable pageable);
+
+    // Progressive overload: date range for a (userId, exerciseDefinitionId) pair
+    @Query("""
+            SELECT e FROM Exercise e
+            JOIN FETCH e.workoutSession ws
+            WHERE ws.user.id = :userId
+              AND e.exerciseDefinitionId = :definitionId
+              AND CAST(ws.date AS LocalDate) BETWEEN :from AND :to
+            ORDER BY ws.date ASC
+            """)
+    List<Exercise> findByUserIdAndDefinitionIdBetween(
+            @Param("userId") UUID userId,
+            @Param("definitionId") UUID definitionId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 
     // Auto-link: exercises with no definition linked for a user
     @Query("""

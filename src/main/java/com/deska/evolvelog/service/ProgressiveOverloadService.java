@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,22 @@ public class ProgressiveOverloadService {
                                       ExerciseDefinitionRepository definitionRepository) {
         this.exerciseRepository = exerciseRepository;
         this.definitionRepository = definitionRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public ProgressiveOverloadDto getProgressiveOverload(UUID userId, UUID definitionId, LocalDate from, LocalDate to) {
+        ExerciseDefinition definition = definitionRepository.findById(definitionId)
+                .filter(d -> d.isSystem() || userId.equals(d.getUserId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Exercise definition not found"));
+
+        // Fetch all sessions in date range, already ordered ASC by the query
+        List<Exercise> ascList = exerciseRepository.findByUserIdAndDefinitionIdBetween(userId, definitionId, from, to);
+
+        if (ascList.isEmpty()) {
+            return new ProgressiveOverloadDto(definitionId, definition.getName(), List.of());
+        }
+
+        return buildResult(definitionId, definition.getName(), ascList);
     }
 
     @Transactional(readOnly = true)
@@ -47,14 +64,17 @@ public class ProgressiveOverloadService {
 
         // Reverse to oldest-first for PR detection
         List<Exercise> ascList = new ArrayList<>(descList.reversed());
+        return buildResult(definitionId, definition.getName(), ascList);
+    }
 
+    private ProgressiveOverloadDto buildResult(UUID definitionId, String name, List<Exercise> ascList) {
         BigDecimal runningMaxE1rm = null;
         List<OverloadHistoryEntryDto> entries = new ArrayList<>(ascList.size());
 
         for (Exercise e : ascList) {
-            Integer reps = e.getReps() != null ? e.getReps() : effectiveReps(e);
+            Integer reps = effectiveReps(e);
             Integer sets = e.getSets();
-            BigDecimal weightKg = e.getWeightKg() != null ? e.getWeightKg() : effectiveWeight(e);
+            BigDecimal weightKg = effectiveWeight(e);
             BigDecimal e1rm = (reps != null) ? VolumeCalculator.epleyE1RM(weightKg, reps) : null;
             BigDecimal performanceIndicator = e1rm != null ? e1rm : weightKg;
             BigDecimal vl = VolumeCalculator.volumeLoad(sets, reps, weightKg);
@@ -103,7 +123,7 @@ public class ProgressiveOverloadService {
         }
 
         // Return most-recent-first as specified
-        return new ProgressiveOverloadDto(definitionId, definition.getName(), withDeltas.reversed());
+        return new ProgressiveOverloadDto(definitionId, name, withDeltas.reversed());
     }
 
     /** Reps from the heaviest completed set, or null if no sets have data. */

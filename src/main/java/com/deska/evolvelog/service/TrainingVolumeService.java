@@ -51,7 +51,11 @@ public class TrainingVolumeService {
         Map<String, Integer> muscleCount = new LinkedHashMap<>();
 
         for (Exercise e : exercises) {
-            BigDecimal vl = VolumeCalculator.volumeLoad(e.getSets(), e.getReps(), e.getWeightKg());
+            BigDecimal vl = e.getWorkoutSets().stream()
+                    .filter(s -> s.getReps() != null && s.getWeightKg() != null)
+                    .map(s -> s.getWeightKg().multiply(BigDecimal.valueOf(s.getReps())))
+                    .reduce(BigDecimal::add)
+                    .orElse(null);
             BigDecimal il = VolumeCalculator.internalLoad(vl, e.getRpe());
 
             if (vl != null) totalVolume = totalVolume.add(vl);

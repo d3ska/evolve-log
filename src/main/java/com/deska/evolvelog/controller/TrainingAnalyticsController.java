@@ -51,10 +51,12 @@ public class TrainingAnalyticsController {
     public ResponseEntity<ApiResponse<ProgressiveOverloadDto>> getProgressiveOverload(
             @AuthenticationPrincipal User user,
             @PathVariable UUID exerciseDefinitionId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "12") int sessions) {
-        int capped = Math.min(sessions, 52);
-        ProgressiveOverloadDto result = overloadService.getProgressiveOverload(
-                user.getId(), exerciseDefinitionId, capped);
+        ProgressiveOverloadDto result = (from != null && to != null)
+                ? overloadService.getProgressiveOverload(user.getId(), exerciseDefinitionId, from, to)
+                : overloadService.getProgressiveOverload(user.getId(), exerciseDefinitionId, Math.min(sessions, 200));
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }
