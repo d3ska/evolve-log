@@ -39,6 +39,8 @@ jobs:
           cache: gradle
 
       - name: Run tests
+        env:
+          APP_AI_ENCRYPTION_KEY: 7w6DZI4crhcyodri7+/3+7t6Do2JD5XQ3Aw6NX9lQ5c=
         run: ./gradlew test --no-daemon
 
   build-and-push:
