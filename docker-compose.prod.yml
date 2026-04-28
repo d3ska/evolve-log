@@ -1,0 +1,58 @@
+# Production Compose file — used on the Hetzner server.
+# Images are pulled from GHCR (pre-built by GitHub Actions).
+# Run: docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: evolvelog-postgres
+    env_file: .env
+    environment:
+      POSTGRES_DB: evolvelog
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/evolve-log-backend:latest
+    container_name: evolvelog-backend
+    env_file: .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/evolvelog
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/evolve-log-frontend:latest
+    container_name: evolvelog-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  app-network:
+    name: evolve-log-net
+    driver: bridge

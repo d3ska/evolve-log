@@ -4,17 +4,58 @@ services:
     container_name: evolvelog-postgres
     environment:
       POSTGRES_DB: evolvelog
-      POSTGRES_USER: evolvelog
-      POSTGRES_PASSWORD: evolvelog_dev
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-evolvelog}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-evolvelog_dev}
     ports:
       - "5432:5432"
     volumes:
-      - evolvelog_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U evolvelog"]
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME:-evolvelog}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: .
+    container_name: evolvelog-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/evolvelog
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-evolvelog}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-evolvelog_dev}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      WITHINGS_CLIENT_ID: ${WITHINGS_CLIENT_ID:-}
+      WITHINGS_CLIENT_SECRET: ${WITHINGS_CLIENT_SECRET:-}
+      APP_AI_ENCRYPTION_KEY: ${APP_AI_ENCRYPTION_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ../evolve-log-ui
+    container_name: evolvelog-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
 
 volumes:
-  evolvelog_data:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  app-network:
+    driver: bridge

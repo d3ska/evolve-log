@@ -1,0 +1,14 @@
+.gradle
+build/
+.git
+.gitignore
+.idea
+*.iml
+*.iws
+*.ipr
+uploads/
+src/main/resources/application-local.properties
+.env
+.env.example
+openspec/
+docs/
