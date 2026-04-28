@@ -44,8 +44,7 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/evolve-log-ui
           path: evolve-log-ui
-          # If the frontend repo is private, add:
-          # token: ${{ secrets.REPO_PAT }}
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
