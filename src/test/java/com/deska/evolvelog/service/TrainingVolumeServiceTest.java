@@ -160,6 +160,7 @@ class TrainingVolumeServiceTest {
             public String getMuscle() { return muscle; }
             public BigDecimal getVolumeLoad() { return volumeLoad; }
             public Long getSessionCount() { return sessionCount; }
+            public Long getSetCount() { return 0L; }
         };
     }
 }

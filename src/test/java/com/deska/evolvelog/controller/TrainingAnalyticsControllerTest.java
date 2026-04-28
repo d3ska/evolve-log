@@ -99,7 +99,7 @@ class TrainingAnalyticsControllerTest {
     @Test
     void shouldReturn200WithWeeklyVolume() throws Exception {
         // given
-        var row = new WeeklyMuscleVolumeDto(LocalDate.of(2025, 1, 6), "chest", new BigDecimal("2400"), 2);
+        var row = new WeeklyMuscleVolumeDto(LocalDate.of(2025, 1, 6), "chest", new BigDecimal("2400"), 2L, 2L);
         when(volumeService.getWeeklyVolumeByMuscle(eq(userId), any(), any(), isNull()))
                 .thenReturn(List.of(row));
 
