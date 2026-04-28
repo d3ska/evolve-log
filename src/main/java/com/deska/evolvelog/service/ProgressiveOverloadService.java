@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -138,8 +139,8 @@ public class ProgressiveOverloadService {
     /** Max weight across completed sets, or null if no sets have data. */
     private static BigDecimal effectiveWeight(Exercise e) {
         return e.getWorkoutSets().stream()
-                .filter(ws -> ws.getWeightKg() != null)
                 .map(WorkoutSet::getWeightKg)
+                .filter(Objects::nonNull)
                 .max(BigDecimal::compareTo)
                 .orElse(null);
     }
