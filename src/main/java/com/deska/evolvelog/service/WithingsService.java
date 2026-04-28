@@ -44,6 +44,14 @@ public class WithingsService {
 
     // ─── OAuth ────────────────────────────────────────────────────────────────
 
+    public String buildAuthUrl() {
+        String params = "response_type=code" +
+                "&client_id=" + clientId +
+                "&scope=user.metrics" +
+                "&redirect_uri=" + redirectUri;
+        return "https://account.withings.com/oauth2_user/authorize2?" + params;
+    }
+
     @Transactional
     public void exchangeCode(User user, String code) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();

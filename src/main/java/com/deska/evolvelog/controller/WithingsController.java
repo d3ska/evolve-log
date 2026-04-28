@@ -33,6 +33,11 @@ public class WithingsController {
         this.healthMetricService = healthMetricService;
     }
 
+    @GetMapping("/api/withings/auth-url")
+    public ResponseEntity<ApiResponse<String>> authUrl() {
+        return ResponseEntity.ok(ApiResponse.success(withingsService.buildAuthUrl()));
+    }
+
     @PostMapping("/api/withings/exchange")
     public ResponseEntity<ApiResponse<WithingsStatusDto>> exchange(
             @AuthenticationPrincipal User user,
