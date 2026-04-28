@@ -49,13 +49,13 @@ class AiChatServiceTest {
         userId = UUID.randomUUID();
         conversationId = UUID.randomUUID();
 
-        when(chatHistoryRepository.findTop10ByUserIdAndConversationIdOrderByCreatedAtDesc(any(), any()))
+        lenient().when(chatHistoryRepository.findTop10ByUserIdAndConversationIdOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of());
-        when(promptLoader.getChatPrompt()).thenReturn("You are a trainer. {{context}}");
-        when(promptContextBuilder.buildContext(any(), any())).thenReturn("Context data");
-        when(modelRouter.selectModelForChat(any())).thenReturn("claude-haiku-4-5");
-        when(aiToolRegistry.toDefinitions()).thenReturn(List.of());
-        when(chatHistoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(promptLoader.getChatPrompt()).thenReturn("You are a trainer. {{context}}");
+        lenient().when(promptContextBuilder.buildContext(any(), any())).thenReturn("Context data");
+        lenient().when(modelRouter.selectModelForChat(any())).thenReturn("claude-haiku-4-5");
+        lenient().when(aiToolRegistry.toDefinitions()).thenReturn(List.of());
+        lenient().when(chatHistoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test
@@ -108,7 +108,7 @@ class AiChatServiceTest {
         when(aiSettingsService.getDecryptedApiKey(userId)).thenReturn(Optional.of("sk-ant-key"));
 
         AiTool fakeTool = mock(AiTool.class);
-        when(fakeTool.name()).thenReturn("get_personal_records");
+        lenient().when(fakeTool.name()).thenReturn("get_personal_records");
         when(fakeTool.execute(any(), eq(userId))).thenReturn("Squat: 150kg");
         when(aiToolRegistry.find("get_personal_records")).thenReturn(Optional.of(fakeTool));
 

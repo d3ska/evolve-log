@@ -3,6 +3,7 @@ package com.deska.evolvelog.service;
 import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.ExerciseDefinition;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.OverloadHistoryEntryDto;
 import com.deska.evolvelog.dto.response.ProgressiveOverloadDto;
 import com.deska.evolvelog.exception.ApiException;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -188,11 +190,17 @@ class ProgressiveOverloadServiceTest {
     private Exercise exerciseAt(LocalDateTime date, int sets, int reps, String weight) {
         WorkoutSession session = WorkoutSession.builder()
                 .id(UUID.randomUUID()).date(date).build();
+        List<WorkoutSet> workoutSets = new ArrayList<>();
+        for (int i = 1; i <= sets; i++) {
+            workoutSets.add(WorkoutSet.builder()
+                    .setNumber(i).reps(reps).weightKg(new BigDecimal(weight)).build());
+        }
         return Exercise.builder()
                 .workoutSession(session)
                 .sets(sets).reps(reps)
                 .weightKg(new BigDecimal(weight))
                 .exerciseDefinitionId(definitionId)
+                .workoutSets(workoutSets)
                 .build();
     }
 }

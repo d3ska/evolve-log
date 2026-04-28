@@ -159,22 +159,22 @@ class AiToolsTest {
                     .date(LocalDateTime.of(2025, 1, 20, 8, 0))
                     .exercises(new ArrayList<>())
                     .build();
-            when(workoutSessionRepository.findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(session)));
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
 
             // when
             String result = tool.execute(emptyInput(), userId);
 
             // then
             assertThat(result).contains("2025-01-20");
-            verify(workoutSessionRepository).findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class));
+            verify(workoutSessionRepository).findRecentByUserIdWithExercises(eq(userId), any(Pageable.class));
         }
 
         @Test
         void shouldCapLimitAt20() {
             // given
-            when(workoutSessionRepository.findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of()));
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of());
             ObjectNode input = objectMapper.createObjectNode();
             input.put("limit", 999);
 
@@ -182,7 +182,7 @@ class AiToolsTest {
             tool.execute(input, userId);
 
             // then — limit capped, still calls repository with userId
-            verify(workoutSessionRepository).findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class));
+            verify(workoutSessionRepository).findRecentByUserIdWithExercises(eq(userId), any(Pageable.class));
         }
     }
 

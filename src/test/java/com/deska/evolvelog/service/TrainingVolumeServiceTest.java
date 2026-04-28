@@ -2,6 +2,7 @@ package com.deska.evolvelog.service;
 
 import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.repository.ExerciseRepository;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,10 +68,12 @@ class TrainingVolumeServiceTest {
         // given — two exercises with weight and RPE
         Exercise e1 = Exercise.builder()
                 .workoutSession(session).sets(3).reps(8).weightKg(new BigDecimal("100"))
-                .rpe(new BigDecimal("8.0")).primaryMuscle("chest").build();
+                .rpe(new BigDecimal("8.0")).primaryMuscle("chest")
+                .workoutSets(workoutSets(3, 8, new BigDecimal("100"))).build();
         Exercise e2 = Exercise.builder()
                 .workoutSession(session).sets(4).reps(10).weightKg(new BigDecimal("60"))
-                .rpe(new BigDecimal("7.0")).primaryMuscle("back").build();
+                .rpe(new BigDecimal("7.0")).primaryMuscle("back")
+                .workoutSets(workoutSets(4, 10, new BigDecimal("60"))).build();
         when(exerciseRepository.findBySessionIdAndUserId(sessionId, userId)).thenReturn(List.of(e1, e2));
 
         // when
@@ -87,10 +91,12 @@ class TrainingVolumeServiceTest {
         // given — one bodyweight (no weight), one weighted
         Exercise bodyweight = Exercise.builder()
                 .workoutSession(session).sets(3).reps(15).weightKg(null)
-                .primaryMuscle("core").build();
+                .primaryMuscle("core")
+                .workoutSets(workoutSets(3, 15, null)).build();
         Exercise weighted = Exercise.builder()
                 .workoutSession(session).sets(3).reps(8).weightKg(new BigDecimal("80"))
-                .primaryMuscle("chest").build();
+                .primaryMuscle("chest")
+                .workoutSets(workoutSets(3, 8, new BigDecimal("80"))).build();
         when(exerciseRepository.findBySessionIdAndUserId(sessionId, userId)).thenReturn(List.of(bodyweight, weighted));
 
         // when
@@ -107,10 +113,12 @@ class TrainingVolumeServiceTest {
         // given — one with RPE, one without
         Exercise withRpe = Exercise.builder()
                 .workoutSession(session).sets(3).reps(8).weightKg(new BigDecimal("100"))
-                .rpe(new BigDecimal("8.0")).primaryMuscle("chest").build();
+                .rpe(new BigDecimal("8.0")).primaryMuscle("chest")
+                .workoutSets(workoutSets(3, 8, new BigDecimal("100"))).build();
         Exercise noRpe = Exercise.builder()
                 .workoutSession(session).sets(3).reps(10).weightKg(new BigDecimal("60"))
-                .primaryMuscle("back").build();
+                .primaryMuscle("back")
+                .workoutSets(workoutSets(3, 10, new BigDecimal("60"))).build();
         when(exerciseRepository.findBySessionIdAndUserId(sessionId, userId)).thenReturn(List.of(withRpe, noRpe));
 
         // when
@@ -152,6 +160,14 @@ class TrainingVolumeServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).muscle()).isEqualTo("chest");
         assertThat(result.get(0).volumeLoad()).isEqualByComparingTo(new BigDecimal("2400"));
+    }
+
+    private List<WorkoutSet> workoutSets(int count, int reps, BigDecimal weight) {
+        List<WorkoutSet> list = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            list.add(WorkoutSet.builder().setNumber(i).reps(reps).weightKg(weight).build());
+        }
+        return list;
     }
 
     private WeeklyVolumeRow mockRow(LocalDate weekStart, String muscle, BigDecimal volumeLoad, long sessionCount) {
