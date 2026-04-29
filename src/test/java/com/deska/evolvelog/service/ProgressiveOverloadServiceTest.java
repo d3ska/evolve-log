@@ -185,6 +185,58 @@ class ProgressiveOverloadServiceTest {
         assertThat(result.history().get(0).volumeDelta()).isEqualByComparingTo(new BigDecimal("-600"));
     }
 
+    // ── T9/T10: manual log fallback ──────────────────────────────────────────
+
+    @Test
+    void shouldComputeE1RmAndVolumeLoadFromExerciseLevelFieldsWhenNoWorkoutSets() {
+        // given — manual log: reps/weight on Exercise, zero WorkoutSet rows
+        Exercise manual = Exercise.builder()
+                .workoutSession(WorkoutSession.builder().id(UUID.randomUUID()).date(LocalDateTime.now().minusDays(3)).build())
+                .sets(3).reps(8).weightKg(new BigDecimal("80"))
+                .exerciseDefinitionId(definitionId)
+                .workoutSets(List.of())
+                .build();
+        when(definitionRepository.findById(definitionId)).thenReturn(Optional.of(definition));
+        when(exerciseRepository.findByUserIdAndDefinitionId(eq(userId), eq(definitionId), any(Pageable.class)))
+                .thenReturn(List.of(manual));
+
+        // when
+        ProgressiveOverloadDto result = service.getProgressiveOverload(userId, definitionId, 12);
+
+        // then
+        assertThat(result.history()).hasSize(1);
+        OverloadHistoryEntryDto entry = result.history().get(0);
+        assertThat(entry.reps()).isEqualTo(8);
+        assertThat(entry.weightKg()).isEqualByComparingTo(new BigDecimal("80"));
+        assertThat(entry.sets()).isEqualTo(3);
+        assertThat(entry.e1Rm()).isNotNull();
+        assertThat(entry.volumeLoad()).isNotNull().isEqualByComparingTo(new BigDecimal("1920")); // 3*8*80
+    }
+
+    @Test
+    void shouldPreferWorkoutSetsDataOverExerciseLevelFields() {
+        // given — exercise-level reps=5/weight=60, but WorkoutSet has reps=10/weight=100
+        WorkoutSet heavySet = WorkoutSet.builder().setNumber(1).reps(10).weightKg(new BigDecimal("100")).build();
+        Exercise e = Exercise.builder()
+                .workoutSession(WorkoutSession.builder().id(UUID.randomUUID()).date(LocalDateTime.now().minusDays(3)).build())
+                .sets(3).reps(5).weightKg(new BigDecimal("60"))
+                .exerciseDefinitionId(definitionId)
+                .workoutSets(List.of(heavySet))
+                .build();
+        when(definitionRepository.findById(definitionId)).thenReturn(Optional.of(definition));
+        when(exerciseRepository.findByUserIdAndDefinitionId(eq(userId), eq(definitionId), any(Pageable.class)))
+                .thenReturn(List.of(e));
+
+        // when
+        ProgressiveOverloadDto result = service.getProgressiveOverload(userId, definitionId, 12);
+
+        // then — workout_sets data wins
+        assertThat(result.history()).hasSize(1);
+        OverloadHistoryEntryDto entry = result.history().get(0);
+        assertThat(entry.reps()).isEqualTo(10);
+        assertThat(entry.weightKg()).isEqualByComparingTo(new BigDecimal("100"));
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private Exercise exerciseAt(LocalDateTime date, int sets, int reps, String weight) {

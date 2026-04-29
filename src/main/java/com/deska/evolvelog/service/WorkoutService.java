@@ -101,7 +101,8 @@ public class WorkoutService {
                 ? request.position()
                 : exerciseRepository.countByWorkoutSessionId(sessionId);
 
-        String primaryMuscle = resolvePrimaryMuscle(request.exerciseDefinitionId());
+        UUID resolvedDefId = resolveDefinitionId(request.name(), request.exerciseDefinitionId());
+        String primaryMuscle = resolvePrimaryMuscle(resolvedDefId);
 
         Exercise exercise = Exercise.builder()
                 .workoutSession(session)
@@ -111,7 +112,7 @@ public class WorkoutService {
                 .weightKg(request.weightKg())
                 .notes(request.notes())
                 .position(position)
-                .exerciseDefinitionId(request.exerciseDefinitionId())
+                .exerciseDefinitionId(resolvedDefId)
                 .rpe(request.rpe())
                 .primaryMuscle(primaryMuscle)
                 .build();
@@ -176,6 +177,14 @@ public class WorkoutService {
         exerciseRepository.delete(exercise);
     }
 
+    private UUID resolveDefinitionId(String name, UUID explicitId) {
+        if (explicitId != null) return explicitId;
+        if (name == null) return null;
+        return definitionRepository.findByNameIgnoreCaseAndIsSystemTrue(name)
+                .map(com.deska.evolvelog.domain.ExerciseDefinition::getId)
+                .orElse(null);
+    }
+
     private String resolvePrimaryMuscle(java.util.UUID definitionId) {
         if (definitionId == null) return null;
         return definitionRepository.findById(definitionId)
@@ -193,7 +202,8 @@ public class WorkoutService {
         List<Exercise> exercises = new ArrayList<>();
         for (int i = 0; i < requests.size(); i++) {
             CreateExerciseRequest req = requests.get(i);
-            String primaryMuscle = resolvePrimaryMuscle(req.exerciseDefinitionId());
+            UUID resolvedDefId = resolveDefinitionId(req.name(), req.exerciseDefinitionId());
+            String primaryMuscle = resolvePrimaryMuscle(resolvedDefId);
             exercises.add(Exercise.builder()
                     .workoutSession(session)
                     .name(req.name())
@@ -202,7 +212,7 @@ public class WorkoutService {
                     .weightKg(req.weightKg())
                     .notes(req.notes())
                     .position(req.position() != null ? req.position() : i)
-                    .exerciseDefinitionId(req.exerciseDefinitionId())
+                    .exerciseDefinitionId(resolvedDefId)
                     .rpe(req.rpe())
                     .primaryMuscle(primaryMuscle)
                     .build());

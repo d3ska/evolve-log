@@ -137,10 +137,16 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
             SELECT DATE_TRUNC('week', ws.date)::date AS week_start,
                    e.primary_muscle                  AS muscle,
                    SUM(
-                       (SELECT SUM(s.reps * s.weight_kg)
-                        FROM workout_sets s
-                        WHERE s.exercise_id = e.id
-                          AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL)
+                       COALESCE(
+                           (SELECT SUM(s.reps * s.weight_kg)
+                            FROM workout_sets s
+                            WHERE s.exercise_id = e.id
+                              AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL),
+                           CASE
+                               WHEN e.sets IS NOT NULL AND e.reps IS NOT NULL AND e.weight_kg IS NOT NULL
+                               THEN (e.sets * e.reps * e.weight_kg)
+                           END
+                       )
                    )                                 AS volume_load,
                    COUNT(DISTINCT ws.id)             AS session_count,
                    SUM(e.sets)                       AS set_count
@@ -150,10 +156,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
               AND e.primary_muscle IS NOT NULL
               AND ws.date BETWEEN :from AND :to
               AND (:muscle IS NULL OR e.primary_muscle = :muscle)
-              AND EXISTS (
-                  SELECT 1 FROM workout_sets s
-                  WHERE s.exercise_id = e.id
-                    AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
+              AND (
+                  EXISTS (
+                      SELECT 1 FROM workout_sets s
+                      WHERE s.exercise_id = e.id
+                        AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
+                  )
+                  OR (e.reps IS NOT NULL AND e.weight_kg IS NOT NULL AND e.sets IS NOT NULL)
               )
             GROUP BY week_start, e.primary_muscle
             ORDER BY week_start ASC, e.primary_muscle ASC

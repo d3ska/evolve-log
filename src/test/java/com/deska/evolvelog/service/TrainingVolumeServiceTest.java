@@ -162,6 +162,27 @@ class TrainingVolumeServiceTest {
         assertThat(result.get(0).volumeLoad()).isEqualByComparingTo(new BigDecimal("2400"));
     }
 
+    // ── T11: manual exercise contributes to weekly volume ────────────────────
+
+    @Test
+    void shouldIncludeManualExerciseVolumeInWeeklyResults() {
+        // given — repository returns a row representing a manual exercise (exercise-level fields, no workout_sets)
+        //         volume_load = 3 × 8 × 80 = 1920 (computed by the native query COALESCE fallback)
+        LocalDate from = LocalDate.of(2025, 4, 1);
+        LocalDate to = LocalDate.of(2025, 4, 30);
+        WeeklyVolumeRow manualRow = mockRow(LocalDate.of(2025, 4, 7), "chest", new BigDecimal("1920"), 1L);
+        when(exerciseRepository.findWeeklyVolumeByMuscle(eq(userId), any(), any(), isNull()))
+                .thenReturn(List.of(manualRow));
+
+        // when
+        var result = service.getWeeklyVolumeByMuscle(userId, from, to, null);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).muscle()).isEqualTo("chest");
+        assertThat(result.get(0).volumeLoad()).isEqualByComparingTo(new BigDecimal("1920"));
+    }
+
     private List<WorkoutSet> workoutSets(int count, int reps, BigDecimal weight) {
         List<WorkoutSet> list = new ArrayList<>();
         for (int i = 1; i <= count; i++) {

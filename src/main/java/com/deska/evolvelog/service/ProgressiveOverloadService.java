@@ -127,21 +127,21 @@ public class ProgressiveOverloadService {
         return new ProgressiveOverloadDto(definitionId, name, withDeltas.reversed());
     }
 
-    /** Reps from the heaviest completed set, or null if no sets have data. */
+    /** Reps from the heaviest completed set; falls back to exercise-level field for manual logs. */
     private static Integer effectiveReps(Exercise e) {
         return e.getWorkoutSets().stream()
                 .filter(ws -> ws.getReps() != null && ws.getWeightKg() != null)
                 .max(java.util.Comparator.comparing(WorkoutSet::getWeightKg))
                 .map(WorkoutSet::getReps)
-                .orElse(null);
+                .orElse(e.getReps());
     }
 
-    /** Max weight across completed sets, or null if no sets have data. */
+    /** Max weight across completed sets; falls back to exercise-level field for manual logs. */
     private static BigDecimal effectiveWeight(Exercise e) {
         return e.getWorkoutSets().stream()
                 .map(WorkoutSet::getWeightKg)
                 .filter(Objects::nonNull)
                 .max(BigDecimal::compareTo)
-                .orElse(null);
+                .orElse(e.getWeightKg());
     }
 }
