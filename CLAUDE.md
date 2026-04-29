@@ -158,16 +158,16 @@ Active changes (in-progress):
 - `openspec/changes/i18n-foundation/`
 - `openspec/changes/supplement-ux-redesign/`
 - `openspec/changes/pwa-assets/`
-- `openspec/changes/manual-workout-analytics-fix/`
-
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
+- `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
 
 Promoted specs (always authoritative):
 - `openspec/specs/global-api-standards/spec.md`
 - `openspec/specs/backend-code-quality/spec.md`
 - `openspec/specs/backend-data-layer/spec.md`
 - `openspec/specs/test-foundation/spec.md`
+- `openspec/specs/manual-workout-analytics/spec.md`
 
 ---
 
