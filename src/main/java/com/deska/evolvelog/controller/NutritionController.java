@@ -1,91 +1,36 @@
 package com.deska.evolvelog.controller;
 
-import com.deska.evolvelog.domain.FitatuFoodLog;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.response.DailyHealthMetricsDto;
 import com.deska.evolvelog.exception.ApiException;
-import com.deska.evolvelog.repository.FitatuFoodLogRepository;
-import com.deska.evolvelog.service.FitatuCsvParser;
-import com.deska.evolvelog.service.FitatuCsvParser.ParseResult;
+import com.deska.evolvelog.service.FitatuImportService;
 import com.deska.evolvelog.service.HealthMetricService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class NutritionController {
 
-    private static final String SOURCE = "fitatu";
+    private static final String FITATU_SOURCE = "fitatu";
 
-    // Maps metric key suffix → unit string
-    private static final Map<String, String> UNITS = Map.ofEntries(
-            Map.entry("kcal",              "kcal"),
-            Map.entry("protein_g",         "g"),
-            Map.entry("protein_plant_g",   "g"),
-            Map.entry("protein_animal_g",  "g"),
-            Map.entry("fat_g",             "g"),
-            Map.entry("fat_saturated_g",   "g"),
-            Map.entry("fat_mono_g",        "g"),
-            Map.entry("fat_poly_g",        "g"),
-            Map.entry("omega3_g",          "g"),
-            Map.entry("omega6_g",          "g"),
-            Map.entry("carbs_g",           "g"),
-            Map.entry("sugar_g",           "g"),
-            Map.entry("cholesterol_mg",    "mg"),
-            Map.entry("fiber_g",           "g"),
-            Map.entry("caffeine_mg",       "mg"),
-            Map.entry("folate_ug",         "ug"),
-            Map.entry("vitamin_a_ug",      "ug"),
-            Map.entry("vitamin_b1_mg",     "mg"),
-            Map.entry("vitamin_b2_mg",     "mg"),
-            Map.entry("vitamin_b5_mg",     "mg"),
-            Map.entry("vitamin_b6_mg",     "mg"),
-            Map.entry("biotin_ug",         "ug"),
-            Map.entry("vitamin_b12_ug",    "ug"),
-            Map.entry("vitamin_c_mg",      "mg"),
-            Map.entry("vitamin_d_ug",      "ug"),
-            Map.entry("vitamin_e_mg",      "mg"),
-            Map.entry("niacin_mg",         "mg"),
-            Map.entry("vitamin_k_ug",      "ug"),
-            Map.entry("zinc_mg",           "mg"),
-            Map.entry("phosphorus_mg",     "mg"),
-            Map.entry("iodine_ug",         "ug"),
-            Map.entry("magnesium_mg",      "mg"),
-            Map.entry("copper_mg",         "mg"),
-            Map.entry("potassium_mg",      "mg"),
-            Map.entry("selenium_ug",       "ug"),
-            Map.entry("sodium_mg",         "mg"),
-            Map.entry("calcium_mg",        "mg"),
-            Map.entry("iron_mg",           "mg"),
-            Map.entry("salt_g",            "g")
-    );
-
-    private final FitatuCsvParser csvParser;
+    private final FitatuImportService fitatuImportService;
     private final HealthMetricService healthMetricService;
-    private final FitatuFoodLogRepository foodLogRepository;
 
-    public NutritionController(FitatuCsvParser csvParser,
-                               HealthMetricService healthMetricService,
-                               FitatuFoodLogRepository foodLogRepository) {
-        this.csvParser = csvParser;
+    public NutritionController(FitatuImportService fitatuImportService,
+                               HealthMetricService healthMetricService) {
+        this.fitatuImportService = fitatuImportService;
         this.healthMetricService = healthMetricService;
-        this.foodLogRepository = foodLogRepository;
     }
 
-    @Transactional
     @PostMapping("/api/nutrition/upload")
     public ResponseEntity<ApiResponse<Integer>> upload(
             @AuthenticationPrincipal User user,
@@ -95,46 +40,12 @@ public class NutritionController {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Uploaded file is empty");
         }
 
-        ParseResult parsed;
         try {
-            parsed = csvParser.parse(file.getInputStream());
+            int count = fitatuImportService.importCsv(user, file.getInputStream());
+            return ResponseEntity.ok(ApiResponse.success(count));
         } catch (IOException | IllegalArgumentException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to parse CSV: " + e.getMessage());
         }
-
-        // Save daily aggregates to health_metrics (upsert)
-        int count = 0;
-        for (Map.Entry<LocalDate, Map<String, BigDecimal>> dayEntry : parsed.dailyTotals().entrySet()) {
-            LocalDate date = dayEntry.getKey();
-            for (Map.Entry<String, BigDecimal> metric : dayEntry.getValue().entrySet()) {
-                String key = metric.getKey();
-                String unit = UNITS.getOrDefault(key, "");
-                healthMetricService.upsert(user, SOURCE, date, key, metric.getValue(), unit);
-                count++;
-            }
-        }
-
-        // Replace raw food log rows for the uploaded dates
-        List<LocalDate> uploadedDates = new ArrayList<>(parsed.dailyTotals().keySet());
-        if (!uploadedDates.isEmpty()) {
-            foodLogRepository.deleteByUserIdAndDateIn(user.getId(), uploadedDates);
-        }
-
-        OffsetDateTime now = OffsetDateTime.now();
-        List<FitatuFoodLog> rows = parsed.rawRows().stream()
-                .map(row -> FitatuFoodLog.builder()
-                        .user(user)
-                        .date(row.date())
-                        .meal(row.meal())
-                        .foodName(row.foodName())
-                        .quantityG(row.quantityG())
-                        .nutrients(row.nutrients())
-                        .importedAt(now)
-                        .build())
-                .toList();
-        foodLogRepository.saveAll(rows);
-
-        return ResponseEntity.ok(ApiResponse.success(count));
     }
 
     @GetMapping("/api/nutrition/daily")
@@ -143,7 +54,7 @@ public class NutritionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
-        List<DailyHealthMetricsDto> data = healthMetricService.getDailyMetrics(user.getId(), SOURCE, from, to);
+        List<DailyHealthMetricsDto> data = healthMetricService.getDailyMetrics(user.getId(), FITATU_SOURCE, from, to);
         return ResponseEntity.ok(ApiResponse.success(data));
     }
 }

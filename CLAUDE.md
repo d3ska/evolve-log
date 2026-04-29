@@ -181,7 +181,7 @@ Promoted specs (always authoritative):
 |---|---|---|
 | Withings / any device | `health_metrics` | `(user_id, source, date, metric_key)` |
 | Fitatu CSV import | `fitatu_food_logs` | `(user_id, date, meal, food_name)` |
-| Blood test upload | `blood_test_reports` + `blood_test_results` | report-level: `(user_id, date, filename)` should be enforced before inserting results |
+| Blood test upload | `blood_test_reports` + `blood_test_results` | `blood_test_reports`: `(user_id, date, lab_name)`; `blood_test_results`: `(report_id, parameter_key)` |
 | AI / analytics | `monthly_exercise_aggregates` | `(user_id, exercise_definition_id, month)` |
 | AI insights | `ai_insights` | `(user_id, type, period_start)` |
 
@@ -206,8 +206,8 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V7 | Google OAuth fields on users |
 | V8 | Withings extended metrics |
 | V9 | Generic `health_metrics` EAV table (replaces withings_measurements) |
-| V10 | `fitatu_food_logs` (CSV import, JSONB nutrients) |
-| V11 | `blood_test_reports` + `blood_test_results` |
+| V10 | `fitatu_food_logs` (CSV import, JSONB nutrients, unique constraint on meal+food_name) |
+| V11 | `blood_test_reports` + `blood_test_results` (unique constraints for upsert idempotency) |
 | V12 | `supplements`, `supplement_plans`, `supplement_plan_entries`, `supplement_logs` |
 | V13 | Missing FK indexes |
 | V14 | `exercise_definitions` catalog (system + user, ~80 seeded exercises) |
@@ -215,7 +215,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V16 | Workout session flow (started_at, finished_at, exercise_definition_id link) |
 | V17 | Workout sets |
 | V18 | AI feature (ai_settings, ai_insights, ai_chat_history, monthly_exercise_aggregates) |
-| V19 | Consolidate exercise data |
+| V19 | Consolidate exercise data (migrate exercise-level reps/weight into workout_sets) |
 
 **Migration rules:**
 - Never modify an existing migration. Always add a new versioned file.
