@@ -154,13 +154,13 @@ Active changes (in-progress):
 - `openspec/changes/workout-session-flow/`
 - `openspec/changes/ai-personal-trainer/`
 - `openspec/changes/active-workout-module/`
-- `openspec/changes/data-sync-idempotency/`
 - `openspec/changes/i18n-foundation/`
 - `openspec/changes/supplement-ux-redesign/`
-- `openspec/changes/pwa-assets/`
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
 - `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
+- `openspec/changes/archive/2026-04-30-data-sync-idempotency/`
+- `openspec/changes/archive/2026-04-30-pwa-assets/`
 
 Promoted specs (always authoritative):
 - `openspec/specs/global-api-standards/spec.md`
@@ -168,6 +168,8 @@ Promoted specs (always authoritative):
 - `openspec/specs/backend-data-layer/spec.md`
 - `openspec/specs/test-foundation/spec.md`
 - `openspec/specs/manual-workout-analytics/spec.md`
+- `openspec/specs/data-sync-idempotency/spec.md`
+- `openspec/specs/pwa-cache-busting/spec.md`
 
 ---
 
