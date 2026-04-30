@@ -38,12 +38,12 @@ public interface SupplementLogRepository extends JpaRepository<SupplementLog, UU
                 (sl.id IS NOT NULL)         AS takenToday,
                 sl.taken_at                 AS loggedAt,
                 sl.id::varchar              AS logId
-            FROM supplement_plan_entries spe
-            JOIN supplement_plans sp     ON sp.id = spe.plan_id
-            JOIN supplements s           ON s.id  = spe.supplement_id
-            LEFT JOIN supplement_logs sl ON sl.plan_entry_id = spe.id
-                                         AND sl.user_id = :userId
-                                         AND DATE(sl.taken_at) = CURRENT_DATE
+            FROM supplement_plans sp
+            LEFT JOIN supplement_plan_entries spe ON spe.plan_id = sp.id
+            LEFT JOIN supplements s               ON s.id = spe.supplement_id
+            LEFT JOIN supplement_logs sl          ON sl.plan_entry_id = spe.id
+                                                  AND sl.user_id = :userId
+                                                  AND DATE(sl.taken_at) = CURRENT_DATE
             WHERE sp.user_id = :userId
               AND sp.active  = true
             ORDER BY sp.name, spe.sort_order

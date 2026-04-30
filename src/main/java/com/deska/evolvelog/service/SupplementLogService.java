@@ -99,7 +99,9 @@ public class SupplementLogService {
             List<SupplementLogRepository.TodayStatusRow> planRows = e.getValue();
             String planName = planRows.get(0).getPlanName();
 
-            List<SupplementTodayDto.TodayEntryDto> entries = planRows.stream().map(r -> new SupplementTodayDto.TodayEntryDto(
+            List<SupplementTodayDto.TodayEntryDto> entries = planRows.stream()
+                    .filter(r -> r.getEntryId() != null)
+                    .map(r -> new SupplementTodayDto.TodayEntryDto(
                     UUID.fromString(r.getEntryId()),
                     UUID.fromString(r.getSupplementId()),
                     r.getSupplementName(),
