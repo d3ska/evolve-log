@@ -1,28 +1,25 @@
 # PWA Assets — Design
 
-## File Renames
+## PWA Manifest Icons
 
-Rename icon files to include a version marker:
-
-```
-public/pwa-192.png      → public/pwa-192-v2.png
-public/pwa-512.png      → public/pwa-512-v2.png
-public/apple-touch-icon.png → public/apple-touch-icon-v2.png  (if present)
-```
-
-## vite.config.ts Changes
-
-Update the `manifest` block in the PWA plugin config:
+Use `favicon.svg` as the primary scalable icon so the home-screen icon
+matches the favicon. Keep PNG variants for legacy and maskable purposes:
 
 ```ts
 manifest: {
   icons: [
-    { src: 'pwa-192-v2.png', sizes: '192x192', type: 'image/png' },
-    { src: 'pwa-512-v2.png', sizes: '512x512', type: 'image/png' },
-    { src: 'pwa-512-v2.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+    { src: 'favicon.svg',               sizes: 'any',    type: 'image/svg+xml' },
+    { src: 'pwa-192x192.png',           sizes: '192x192', type: 'image/png' },
+    { src: 'pwa-512x512.png',           sizes: '512x512', type: 'image/png' },
+    { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ],
 }
 ```
+
+`sizes: 'any'` is the correct declaration for SVG — it tells the browser
+the icon scales to any required size. Modern Android Chrome and desktop
+Chromium will prefer the SVG entry. iOS Safari ignores SVG manifest icons
+and falls back to `apple-touch-icon-180x180.png` (already in `includeAssets`).
 
 ## Workbox Config Changes
 
@@ -31,13 +28,13 @@ Add `manifest.webmanifest` to the SW exclusion list so it is never precached:
 ```ts
 workbox: {
   navigateFallbackDenylist: [/\/manifest\.webmanifest/],
-  // Existing exclusions remain (AI chat, auth endpoints, etc.)
+  // Existing exclusions remain (OAuth endpoints, etc.)
 }
 ```
 
 ## Server-Side Cache-Control
 
-In the production Nginx config (or `docker-compose.prod.yml` Nginx service):
+In the production Nginx config:
 
 ```nginx
 location = /manifest.webmanifest {
@@ -45,20 +42,9 @@ location = /manifest.webmanifest {
 }
 ```
 
-In development (Vite), the manifest is served fresh by the dev server automatically.
-
 ## Why This Works
 
-1. New filenames → new URLs → Workbox precache hash changes → SW installs a new version
-2. Old SW unregisters; new SW activates and precaches the new icon URLs
-3. `manifest.webmanifest` is never in the precache → browser always checks the network for it
-4. On the next PWA update prompt (or automatic background update), the new icon is applied
-
-## Note on Existing PWA Installs
-
-Existing installs on mobile will see the updated icon after the next SW update cycle,
-which triggers automatically in the background. Users do not need to reinstall the PWA.
-Force-clearing can be done by incrementing `version` in the manifest:
-```ts
-manifest: { version: '2', ... }
-```
+1. SVG icon with `sizes: 'any'` → browser picks the best icon at every resolution
+2. `manifest.webmanifest` is never in the precache → browser always fetches it fresh
+3. iOS falls back to `apple-touch-icon-180x180.png` — already handled
+4. Maskable icon stays PNG for reliable adaptive-icon support

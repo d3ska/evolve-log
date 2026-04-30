@@ -1,19 +1,15 @@
 # PWA Assets — Tasks
 
-- [ ] **T1** Rename icon files in `public/`:
-  - `pwa-192.png` → `pwa-192-v2.png`
-  - `pwa-512.png` → `pwa-512-v2.png`
-  - Any `apple-touch-icon.png` → `apple-touch-icon-v2.png`
+- [ ] **T1** Add `{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' }` as first entry
+  in the `manifest.icons` array in `vite.config.ts`
 
-- [ ] **T2** Update `vite.config.ts` manifest icon references to new filenames
+- [ ] **T2** Add `manifest.webmanifest` to Workbox `navigateFallbackDenylist` in `vite.config.ts`
 
-- [ ] **T3** Add `manifest.webmanifest` to Workbox `navigateFallbackDenylist` in `vite.config.ts`
+- [ ] **T3** Add `Cache-Control: no-store` header for `/manifest.webmanifest` in the Nginx
+  production config (`docker-compose.prod.yml` or dedicated nginx.conf)
 
-- [ ] **T4** Add `version: '2'` to the PWA manifest object in `vite.config.ts` to force reinstall
-  on existing PWA installs
+- [ ] **T4** Verify: build the app, inspect `dist/sw.js` precache manifest — confirm `favicon.svg`
+  appears in the manifest icons and `manifest.webmanifest` is not listed in the precache
 
-- [ ] **T5** Add `Cache-Control: no-store` header for `/manifest.webmanifest` in Nginx production config
-
-- [ ] **T6** Verify: build the app, inspect `dist/sw.js` precache manifest — confirm new icon filenames appear and no manifest URL is listed
-
-- [ ] **T7** Verify on a real mobile device: install/update PWA and confirm new icon is shown
+- [ ] **T5** Verify on a real Android device: install/update PWA and confirm the SVG icon
+  appears on the home screen
