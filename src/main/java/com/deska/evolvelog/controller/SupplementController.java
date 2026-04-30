@@ -4,6 +4,7 @@ import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.ApiResponse;
 import com.deska.evolvelog.dto.request.*;
 import com.deska.evolvelog.dto.response.*;
+import com.deska.evolvelog.dto.response.SupplementTodayDto;
 import com.deska.evolvelog.service.SupplementCatalogService;
 import com.deska.evolvelog.service.SupplementLogService;
 import com.deska.evolvelog.service.SupplementPlanService;
@@ -59,6 +60,12 @@ public class SupplementController {
     }
 
     // ── Plans ───────────────────────────────────────────────────────────────
+
+    @GetMapping("/plans/today")
+    public ResponseEntity<ApiResponse<List<SupplementTodayDto>>> getTodayStatus(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(logService.getTodayStatus(user.getId())));
+    }
 
     @PostMapping("/plans")
     public ResponseEntity<ApiResponse<SupplementPlanDto>> createPlan(

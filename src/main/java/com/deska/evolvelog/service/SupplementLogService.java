@@ -3,6 +3,7 @@ package com.deska.evolvelog.service;
 import com.deska.evolvelog.domain.*;
 import com.deska.evolvelog.dto.request.LogSupplementRequest;
 import com.deska.evolvelog.dto.response.SupplementLogDto;
+import com.deska.evolvelog.dto.response.SupplementTodayDto;
 import com.deska.evolvelog.repository.SupplementLogRepository;
 import com.deska.evolvelog.repository.SupplementPlanEntryRepository;
 import com.deska.evolvelog.repository.SupplementRepository;
@@ -12,10 +13,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -79,5 +84,34 @@ public class SupplementLogService {
         SupplementLog log = logRepository.findByIdAndUserId(logId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Log entry not found"));
         logRepository.delete(log);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplementTodayDto> getTodayStatus(UUID userId) {
+        List<SupplementLogRepository.TodayStatusRow> rows = logRepository.findTodayStatus(userId);
+
+        Map<String, List<SupplementLogRepository.TodayStatusRow>> byPlan = new LinkedHashMap<>();
+        for (SupplementLogRepository.TodayStatusRow row : rows) {
+            byPlan.computeIfAbsent(row.getPlanId(), k -> new ArrayList<>()).add(row);
+        }
+
+        return byPlan.entrySet().stream().map(e -> {
+            List<SupplementLogRepository.TodayStatusRow> planRows = e.getValue();
+            String planName = planRows.get(0).getPlanName();
+
+            List<SupplementTodayDto.TodayEntryDto> entries = planRows.stream().map(r -> new SupplementTodayDto.TodayEntryDto(
+                    UUID.fromString(r.getEntryId()),
+                    UUID.fromString(r.getSupplementId()),
+                    r.getSupplementName(),
+                    TimeSlot.valueOf(r.getTimeSlot()),
+                    r.getDoseAmount(),
+                    r.getDoseUnit(),
+                    r.getTakenToday(),
+                    r.getLoggedAt() != null ? r.getLoggedAt().atOffset(ZoneOffset.UTC) : null,
+                    r.getLogId() != null ? UUID.fromString(r.getLogId()) : null
+            )).toList();
+
+            return new SupplementTodayDto(UUID.fromString(e.getKey()), planName, entries);
+        }).toList();
     }
 }
