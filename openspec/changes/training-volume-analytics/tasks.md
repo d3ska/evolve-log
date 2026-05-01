@@ -86,22 +86,22 @@
 
 ## 12. Frontend — Exercise Definition Integration
 
-- [ ] 12.1 Add `src/api/exerciseDefinitions.ts`: `listDefinitions(q?, muscle?)`, `createDefinition(req)`, `getMuscleGroups()`
-- [ ] 12.2 Add exercise name autocomplete to the exercise log form — debounced `GET /api/exercises/definitions?q=` as user types, selects definition to set `exerciseDefinitionId`
-- [ ] 12.3 Add RPE number input (1–10, step 0.5) to exercise log form (optional field)
-- [ ] 12.4 Add "Link exercises" banner on the workout history page if any exercises have no definition linked — triggers auto-link call
+- [x] 12.1 Add `src/api/exerciseDefinitions.ts`: `listDefinitions(q?, muscle?)`, `createDefinition(req)`, `getMuscleGroups()`
+- [x] 12.2 Add exercise name autocomplete to the exercise log form — debounced `GET /api/exercises/definitions?q=` as user types, selects definition to set `exerciseDefinitionId`
+- [x] 12.3 Add RPE number input (1–10, step 0.5) to exercise log form (optional field)
+- [x] 12.4 Add "Link exercises" banner on the workout history page if any exercises have no definition linked — triggers auto-link call
 
 ## 13. Frontend — Volume Dashboard
 
-- [ ] 13.1 Add `src/api/analytics.ts`: `getSessionVolume(sessionId)`, `getWeeklyVolume(from, to, muscle?)`, `getProgressiveOverload(exerciseDefinitionId, sessions?)`
-- [ ] 13.2 Create `SessionVolumeSummary` component — shows total volume load, internal load (if available), and breakdown by muscle group as a horizontal bar chart
-- [ ] 13.3 Display `SessionVolumeSummary` on the workout session detail page
-- [ ] 13.4 Create `WeeklyVolumeChart` component — Recharts `BarChart` grouped by week, one series per muscle group, with muscle filter dropdown
-- [ ] 13.5 Add weekly volume chart to the Analytics page
+- [x] 13.1 Add `src/api/analytics.ts`: `getSessionVolume(sessionId)`, `getWeeklyVolume(from, to, muscle?)`, `getProgressiveOverload(exerciseDefinitionId, sessions?)`
+- [x] 13.2 Create `SessionVolumeSummary` component — shows total volume load, internal load (if available), and breakdown by muscle group as a horizontal bar chart
+- [x] 13.3 Display `SessionVolumeSummary` on the workout session detail page
+- [x] 13.4 Create `WeeklyVolumeChart` component — Recharts `BarChart` grouped by week, one series per muscle group, with muscle filter dropdown
+- [x] 13.5 Add weekly volume chart to the Analytics page
 
 ## 14. Frontend — Progressive Overload Charts
 
-- [ ] 14.1 Create `ProgressiveOverloadChart` component — Recharts `LineChart` with e1RM over time, PR markers as dots with distinct color/size
-- [ ] 14.2 Add exercise definition selector (searchable dropdown) to choose which exercise to view
-- [ ] 14.3 Show `volumeDelta` as a secondary axis or tooltip annotation on the overload chart
-- [ ] 14.4 Add progressive overload section to the Analytics page with exercise selector + chart
+- [x] 14.1 Create `ProgressiveOverloadChart` component — Recharts `LineChart` with e1RM over time, PR markers as dots with distinct color/size
+- [x] 14.2 Add exercise definition selector (searchable dropdown) to choose which exercise to view
+- [x] 14.3 Show `volumeDelta` as a secondary axis or tooltip annotation on the overload chart
+- [x] 14.4 Add progressive overload section to the Analytics page with exercise selector + chart

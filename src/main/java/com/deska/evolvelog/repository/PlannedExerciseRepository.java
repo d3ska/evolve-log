@@ -14,4 +14,6 @@ public interface PlannedExerciseRepository extends JpaRepository<PlannedExercise
     Optional<PlannedExercise> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
     int countByTrainingPlanId(UUID trainingPlanId);
+
+    void deleteAllByTrainingPlanId(UUID trainingPlanId);
 }

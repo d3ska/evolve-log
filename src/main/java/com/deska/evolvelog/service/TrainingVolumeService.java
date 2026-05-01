@@ -56,6 +56,10 @@ public class TrainingVolumeService {
                     .map(s -> s.getWeightKg().multiply(BigDecimal.valueOf(s.getReps())))
                     .reduce(BigDecimal::add)
                     .orElse(null);
+            // Fallback for manually logged exercises that have no workout_set rows
+            if (vl == null && e.getSets() != null && e.getReps() != null && e.getWeightKg() != null) {
+                vl = e.getWeightKg().multiply(BigDecimal.valueOf((long) e.getSets() * e.getReps()));
+            }
             BigDecimal il = VolumeCalculator.internalLoad(vl, e.getRpe());
 
             if (vl != null) totalVolume = totalVolume.add(vl);

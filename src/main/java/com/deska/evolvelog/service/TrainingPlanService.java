@@ -65,6 +65,12 @@ public class TrainingPlanService {
     public TrainingPlan update(UUID id, UUID userId, UpdateTrainingPlanRequest request) {
         TrainingPlan plan = findById(id, userId);
         plan.applyPatch(request.name(), request.description(), request.dayOfWeek(), request.isActive());
+        if (request.plannedExercises() != null) {
+            exerciseRepository.deleteAllByTrainingPlanId(plan.getId());
+            List<PlannedExercise> newExercises = buildExercises(request.plannedExercises(), plan);
+            plan.getPlannedExercises().clear();
+            plan.getPlannedExercises().addAll(newExercises);
+        }
         return planRepository.save(plan);
     }
 

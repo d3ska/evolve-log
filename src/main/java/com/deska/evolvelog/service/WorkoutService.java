@@ -124,7 +124,7 @@ public class WorkoutService {
     public Exercise updateExercise(UUID sessionId, UUID exerciseId, UUID userId, UpdateExerciseRequest request) {
         // Verify session ownership
         findById(sessionId, userId);
-        Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
+        Exercise exercise = exerciseRepository.findByIdAndUserIdWithSets(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
 
         String primaryMuscle = request.exerciseDefinitionId() != null

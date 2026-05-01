@@ -17,6 +17,14 @@ import java.util.UUID;
 
 public interface ExerciseRepository extends JpaRepository<Exercise, UUID> {
     Optional<Exercise> findByIdAndWorkoutSessionUserId(UUID id, UUID userId);
+
+    @Query("""
+            SELECT e FROM Exercise e
+            LEFT JOIN FETCH e.workoutSets
+            WHERE e.id = :id AND e.workoutSession.user.id = :userId
+            """)
+    Optional<Exercise> findByIdAndUserIdWithSets(@Param("id") UUID id, @Param("userId") UUID userId);
+
     int countByWorkoutSessionId(UUID workoutSessionId);
 
     // Personal records: heaviest set ever per exercise name for a user
