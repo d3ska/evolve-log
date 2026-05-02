@@ -6,15 +6,19 @@ import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSessionStatus;
 import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
+import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
+import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,10 +40,15 @@ public class WorkoutSessionFlowService {
     private final TrainingPlanRepository planRepository;
     private final WorkoutSessionRepository sessionRepository;
     private final ExerciseDefinitionRepository definitionRepository;
+    private final ExerciseRepository exerciseRepository;
     private final TrainingVolumeService volumeService;
 
     @Transactional
     public WorkoutSession startFromPlan(User user, UUID trainingPlanId) {
+        if (sessionRepository.existsByUserIdAndStatus(user.getId(), WorkoutSessionStatus.ACTIVE)) {
+            throw new ApiException(HttpStatus.CONFLICT, "You already have an active workout session");
+        }
+
         TrainingPlan plan = planRepository.findByIdAndUserId(trainingPlanId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("TrainingPlan", trainingPlanId));
 
@@ -50,6 +60,7 @@ public class WorkoutSessionFlowService {
                 .date(now)
                 .startedAt(now)
                 .build();
+        session.activate();
 
         List<PlannedExercise> plannedExercises = plan.getPlannedExercises();
         if (!plannedExercises.isEmpty()) {
@@ -99,6 +110,42 @@ public class WorkoutSessionFlowService {
 
         SessionVolumeSummaryDto volume = computeVolumeSummary(session, userId);
         return new FinishedSessionDto(WorkoutSessionDto.from(session), volume);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<WorkoutSession> getActiveSession(UUID userId) {
+        return sessionRepository.findByUserIdAndStatus(userId, WorkoutSessionStatus.ACTIVE);
+    }
+
+    @Transactional
+    public Exercise addExercise(UUID sessionId, UUID userId, String name, Integer sets) {
+        sessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", sessionId));
+
+        int position = exerciseRepository.countByWorkoutSessionId(sessionId);
+
+        Exercise exercise = Exercise.builder()
+                .workoutSession(sessionRepository.getReferenceById(sessionId))
+                .name(name)
+                .sets(sets)
+                .position(position)
+                .build();
+
+        for (int i = 1; i <= sets; i++) {
+            exercise.getWorkoutSets().add(WorkoutSet.builder()
+                    .exercise(exercise)
+                    .setNumber(i)
+                    .build());
+        }
+
+        return exerciseRepository.save(exercise);
+    }
+
+    @Transactional
+    public void removeExercise(UUID exerciseId, UUID userId) {
+        Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
+        exerciseRepository.delete(exercise);
     }
 
     private Map<UUID, ExerciseDefinition> loadDefinitions(List<PlannedExercise> plannedExercises) {

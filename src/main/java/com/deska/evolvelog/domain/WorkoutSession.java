@@ -40,6 +40,10 @@ public class WorkoutSession {
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private WorkoutSessionStatus status = WorkoutSessionStatus.MANUAL;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
@@ -66,6 +70,11 @@ public class WorkoutSession {
 
     public void finish(LocalDateTime finishedAt, Integer durationMinutes) {
         this.finishedAt = finishedAt;
+        this.status = WorkoutSessionStatus.FINISHED;
         if (durationMinutes != null) this.durationMinutes = durationMinutes;
+    }
+
+    public void activate() {
+        this.status = WorkoutSessionStatus.ACTIVE;
     }
 }

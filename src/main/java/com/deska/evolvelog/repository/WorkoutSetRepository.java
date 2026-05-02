@@ -12,12 +12,8 @@ public interface WorkoutSetRepository extends JpaRepository<WorkoutSet, UUID> {
 
     @Query("""
             SELECT ws FROM WorkoutSet ws
-            WHERE ws.exercise.id = :exerciseId
-              AND ws.setNumber = :setNumber
+            WHERE ws.id = :setId
               AND ws.exercise.workoutSession.user.id = :userId
             """)
-    Optional<WorkoutSet> findByExerciseIdAndSetNumberAndUserId(
-            @Param("exerciseId") UUID exerciseId,
-            @Param("setNumber") Integer setNumber,
-            @Param("userId") UUID userId);
+    Optional<WorkoutSet> findByIdAndUserId(@Param("setId") UUID setId, @Param("userId") UUID userId);
 }

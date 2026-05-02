@@ -1,6 +1,7 @@
 package com.deska.evolvelog.dto.response;
 
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSessionStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,7 +16,8 @@ public record WorkoutSessionDto(
         List<ExerciseDto> exercises,
         LocalDateTime createdAt,
         LocalDateTime startedAt,
-        LocalDateTime finishedAt
+        LocalDateTime finishedAt,
+        WorkoutSessionStatus status
 ) {
     public static WorkoutSessionDto from(WorkoutSession session) {
         return new WorkoutSessionDto(
@@ -27,7 +29,8 @@ public record WorkoutSessionDto(
                 session.getExercises().stream().map(ExerciseDto::from).toList(),
                 session.getCreatedAt(),
                 session.getStartedAt(),
-                session.getFinishedAt()
+                session.getFinishedAt(),
+                session.getStatus()
         );
     }
 
@@ -41,7 +44,8 @@ public record WorkoutSessionDto(
                 List.of(),
                 session.getCreatedAt(),
                 session.getStartedAt(),
-                session.getFinishedAt()
+                session.getFinishedAt(),
+                session.getStatus()
         );
     }
 }

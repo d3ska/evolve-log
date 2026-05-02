@@ -9,6 +9,7 @@ import com.deska.evolvelog.exception.GlobalExceptionHandler;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.service.WorkoutService;
 import com.deska.evolvelog.service.WorkoutSessionFlowService;
+import com.deska.evolvelog.service.WorkoutSetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,9 @@ class WorkoutControllerTest {
     @Mock
     private WorkoutSessionFlowService flowService;
 
+    @Mock
+    private WorkoutSetService workoutSetService;
+
     private MockMvc mockMvc;
     private User mockUser;
     private UUID userId;
@@ -59,7 +63,7 @@ class WorkoutControllerTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        var controller = new WorkoutController(workoutService, flowService);
+        var controller = new WorkoutController(workoutService, flowService, workoutSetService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver())

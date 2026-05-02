@@ -10,6 +10,7 @@ import com.deska.evolvelog.dto.response.MuscleGroupVolumeDto;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
+import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class WorkoutSessionFlowServiceTest {
 
     @Mock
     private ExerciseDefinitionRepository definitionRepository;
+
+    @Mock
+    private ExerciseRepository exerciseRepository;
 
     @Mock
     private TrainingVolumeService volumeService;

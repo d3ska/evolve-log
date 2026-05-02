@@ -1,6 +1,7 @@
 package com.deska.evolvelog.repository;
 
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSessionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -22,8 +23,13 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     List<WorkoutSession> findByUserIdAndDateBetweenOrderByDateAsc(UUID userId, LocalDateTime start, LocalDateTime end);
 
-    // Eagerly loads exercises and their per-set data
-    @EntityGraph(attributePaths = {"exercises"})
+    // Eagerly loads exercises; workoutSets loaded via SUBSELECT (FetchType.EAGER on Exercise)
+    @EntityGraph(attributePaths = {"exercises"}, type = EntityGraph.EntityGraphType.LOAD)
     @Query("SELECT s FROM WorkoutSession s WHERE s.id = :id AND s.user.id = :userId")
     Optional<WorkoutSession> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    boolean existsByUserIdAndStatus(UUID userId, WorkoutSessionStatus status);
+
+    @EntityGraph(attributePaths = {"exercises"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<WorkoutSession> findByUserIdAndStatus(UUID userId, WorkoutSessionStatus status);
 }

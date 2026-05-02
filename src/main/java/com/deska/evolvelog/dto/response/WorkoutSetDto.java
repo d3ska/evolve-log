@@ -7,11 +7,19 @@ import java.util.UUID;
 
 public record WorkoutSetDto(
         UUID id,
+        UUID exerciseId,
         Integer setNumber,
         Integer reps,
-        BigDecimal weightKg
+        BigDecimal weightKg,
+        boolean completed
 ) {
     public static WorkoutSetDto from(WorkoutSet s) {
-        return new WorkoutSetDto(s.getId(), s.getSetNumber(), s.getReps(), s.getWeightKg());
+        return new WorkoutSetDto(
+                s.getId(),
+                s.getExercise().getId(),
+                s.getSetNumber(),
+                s.getReps(),
+                s.getWeightKg(),
+                s.isCompleted());
     }
 }

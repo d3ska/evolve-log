@@ -4,7 +4,6 @@ import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
-import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.request.CreateExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
@@ -15,7 +14,6 @@ import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
-import com.deska.evolvelog.repository.WorkoutSetRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -32,18 +30,14 @@ public class WorkoutService {
     private final ExerciseRepository exerciseRepository;
     private final TrainingPlanRepository trainingPlanRepository;
     private final ExerciseDefinitionRepository definitionRepository;
-    private final WorkoutSetRepository workoutSetRepository;
-
     public WorkoutService(WorkoutSessionRepository sessionRepository,
                           ExerciseRepository exerciseRepository,
                           TrainingPlanRepository trainingPlanRepository,
-                          ExerciseDefinitionRepository definitionRepository,
-                          WorkoutSetRepository workoutSetRepository) {
+                          ExerciseDefinitionRepository definitionRepository) {
         this.sessionRepository = sessionRepository;
         this.exerciseRepository = exerciseRepository;
         this.trainingPlanRepository = trainingPlanRepository;
         this.definitionRepository = definitionRepository;
-        this.workoutSetRepository = workoutSetRepository;
     }
 
     @Transactional
@@ -135,38 +129,6 @@ public class WorkoutService {
                 request.exerciseDefinitionId(), request.rpe(), primaryMuscle);
 
         return exerciseRepository.save(exercise);
-    }
-
-    @Transactional
-    public WorkoutSet updateSet(UUID sessionId, UUID exerciseId, int setNumber, UUID userId,
-                                Integer reps, java.math.BigDecimal weightKg) {
-        // Verify session ownership
-        findById(sessionId, userId);
-        WorkoutSet ws = workoutSetRepository
-                .findByExerciseIdAndSetNumberAndUserId(exerciseId, setNumber, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSet",
-                        exerciseId + "/" + setNumber));
-        ws.update(reps, weightKg);
-        workoutSetRepository.save(ws);
-
-        // Denormalize: sync aggregated reps/weight to the Exercise so analytics queries work
-        Exercise exercise = exerciseRepository.findById(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
-        List<WorkoutSet> allSets = exercise.getWorkoutSets();
-        java.math.BigDecimal maxWeight = allSets.stream()
-                .filter(s -> s.getWeightKg() != null)
-                .map(WorkoutSet::getWeightKg)
-                .max(java.math.BigDecimal::compareTo)
-                .orElse(null);
-        Integer effectiveReps = allSets.stream()
-                .filter(s -> s.getWeightKg() != null && s.getWeightKg().equals(maxWeight) && s.getReps() != null)
-                .map(WorkoutSet::getReps)
-                .findFirst()
-                .orElse(null);
-        exercise.updateAggregates(effectiveReps, maxWeight);
-        exerciseRepository.save(exercise);
-
-        return ws;
     }
 
     @Transactional

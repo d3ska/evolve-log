@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew test:*)",
+      "Bash(xargs grep:*)",
+      "Bash(openspec status:*)",
+      "Bash(done)",
+      "Bash(for change:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/Mateusz Deska/IdeaProjects/evolve-log/openspec/changes/$change/**)",
+      "Bash(./gradlew tasks:*)",
+      "Bash(./gradlew compileJava compileTestJava --no-daemon)",
+      "Bash(./gradlew compileJava --no-daemon)",
+      "Bash(grep -r \"logo\\\\|favicon\\\\|icon\\\\|svg\" 'C:\\\\Users\\\\Mateusz Deska\\\\IdeaProjects\\\\evolve-log-ui\\\\src' --include=*.tsx --include=*.ts -l)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx pwa-assets-generator:*)",
+      "Bash(mkdir -p openspec/changes/archive)",
+      "Bash(mv openspec/changes/pwa-assets openspec/changes/archive/2026-04-30-pwa-assets)",
+      "Bash(mv openspec/changes/data-sync-idempotency openspec/changes/archive/2026-04-30-data-sync-idempotency)"
+    ]
+  }
+}

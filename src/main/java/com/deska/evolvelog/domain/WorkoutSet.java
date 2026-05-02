@@ -30,8 +30,12 @@ public class WorkoutSet {
     @Column(name = "weight_kg", precision = 6, scale = 2)
     private BigDecimal weightKg;
 
-    public void update(Integer reps, BigDecimal weightKg) {
+    @Column(nullable = false)
+    private boolean completed = false;
+
+    public void update(Integer reps, BigDecimal weightKg, Boolean completed) {
         if (reps != null) this.reps = reps;
         if (weightKg != null) this.weightKg = weightKg;
+        if (completed != null) this.completed = completed;
     }
 }
