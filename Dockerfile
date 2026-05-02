@@ -19,7 +19,7 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 
 COPY --from=builder /app/build/libs/*.jar app.jar
-RUN chown spring:spring app.jar
+RUN mkdir -p /app/uploads && chown -R spring:spring /app/uploads app.jar
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:8080/actuator/health || exit 1
