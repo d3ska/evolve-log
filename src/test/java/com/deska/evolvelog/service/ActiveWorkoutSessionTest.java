@@ -195,7 +195,7 @@ class ActiveWorkoutSessionTest {
         WorkoutSession session = flowService.startFromPlan(user, plan.getId());
         Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Deadlift", 1);
 
-        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 5, new BigDecimal("100.00"));
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 2, 5, new BigDecimal("100.00"));
 
         assertThat(ws.getId()).isNotNull();
         assertThat(ws.getReps()).isEqualTo(5);
@@ -207,7 +207,7 @@ class ActiveWorkoutSessionTest {
     void updateSet_shouldApplyPartialPatch() {
         WorkoutSession session = flowService.startFromPlan(user, plan.getId());
         Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Overhead Press", 1);
-        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 8, new BigDecimal("60.00"));
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 2, 8, new BigDecimal("60.00"));
 
         WorkoutSet updated = workoutSetService.updateSet(ws.getId(), user.getId(), 10, null, true);
 
@@ -220,7 +220,7 @@ class ActiveWorkoutSessionTest {
     void deleteSet_shouldRemoveSetFromDatabase() {
         WorkoutSession session = flowService.startFromPlan(user, plan.getId());
         Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Row", 1);
-        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 10, new BigDecimal("80.00"));
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 2, 10, new BigDecimal("80.00"));
 
         workoutSetService.deleteSet(ws.getId(), user.getId());
 
@@ -231,7 +231,7 @@ class ActiveWorkoutSessionTest {
     void setCrud_shouldThrowNotFoundWhenAccessedByOtherUser() {
         WorkoutSession session = flowService.startFromPlan(user, plan.getId());
         Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Curl", 1);
-        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 12, new BigDecimal("20.00"));
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 2, 12, new BigDecimal("20.00"));
 
         java.util.UUID otherId = java.util.UUID.randomUUID();
         assertThatThrownBy(() -> workoutSetService.updateSet(ws.getId(), otherId, 10, null, null))
