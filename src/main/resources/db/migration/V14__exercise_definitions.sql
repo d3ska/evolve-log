@@ -120,4 +120,21 @@ INSERT INTO exercise_definitions (name, primary_muscle, secondary_muscles, equip
 -- TRAPS / UPPER BACK
 ('Barbell Shrug',             'traps', ARRAY[]::text[], 'barbell', true),
 ('Dumbbell Shrug',            'traps', ARRAY[]::text[], 'dumbbell', true),
-('Rack Pull',                 'traps', ARRAY['back'], 'barbell', true);
+('Rack Pull',                 'traps', ARRAY['back'], 'barbell', true),
+
+-- CHEST (machines)
+('Pec Deck',                  'chest', ARRAY[]::text[], 'machine', true),
+
+-- BACK (additional)
+('Reverse Pec Deck',          'back',  ARRAY['rear delts'], 'machine', true),
+('Hammer Strength Row',       'back',  ARRAY['biceps'], 'machine', true),
+('Chest Supported Row',       'back',  ARRAY['biceps'], 'dumbbell', true),
+('Dual Cable Lat Pulldown',   'back',  ARRAY['biceps'], 'cable', true),
+('Neutral Grip Pull-Up',      'back',  ARRAY['biceps'], 'bodyweight', true),
+
+-- TRICEPS (additional)
+('Cross Cable Tricep Extension', 'triceps', ARRAY[]::text[], 'cable', true),
+
+-- CORE (additional)
+('Hollow Body',               'core', ARRAY[]::text[], 'bodyweight', true),
+('Hanging Knee Raise',        'core', ARRAY['hip flexors'], 'bodyweight', true);
