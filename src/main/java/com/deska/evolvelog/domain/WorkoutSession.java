@@ -40,6 +40,7 @@ public class WorkoutSession {
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private WorkoutSessionStatus status = WorkoutSessionStatus.MANUAL;

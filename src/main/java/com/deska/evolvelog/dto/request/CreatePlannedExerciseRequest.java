@@ -31,6 +31,5 @@ public record CreatePlannedExerciseRequest(
 
         String notes,
 
-        @NotNull(message = "Exercise definition is required")
         UUID exerciseDefinitionId
 ) {}

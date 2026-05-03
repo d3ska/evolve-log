@@ -212,12 +212,13 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V11 | `blood_test_reports` + `blood_test_results` (unique constraints for upsert idempotency) |
 | V12 | `supplements`, `supplement_plans`, `supplement_plan_entries`, `supplement_logs` |
 | V13 | Missing FK indexes |
-| V14 | `exercise_definitions` catalog (system + user, ~80 seeded exercises) |
+| V14 | `exercise_definitions` catalog (system + user, ~92 seeded exercises) |
 | V15 | Exercise volume fields |
 | V16 | Workout session flow (started_at, finished_at, exercise_definition_id link) |
 | V17 | Workout sets |
 | V18 | AI feature (ai_settings, ai_insights, ai_chat_history, monthly_exercise_aggregates) |
 | V19 | Consolidate exercise data (migrate exercise-level reps/weight into workout_sets) |
+| V20 | Active workout module (session status lifecycle, per-set completion flag) |
 
 **Migration rules:**
 - Never modify an existing migration. Always add a new versioned file.

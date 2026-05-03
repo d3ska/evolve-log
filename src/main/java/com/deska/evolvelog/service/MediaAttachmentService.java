@@ -28,8 +28,16 @@ public class MediaAttachmentService {
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of("video/mp4", "video/quicktime", "video/webm");
+    private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of(
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "text/plain"
+    );
     private static final long MAX_IMAGE_SIZE = 10 * 1024 * 1024L;
     private static final long MAX_VIDEO_SIZE = 200 * 1024 * 1024L;
+    private static final long MAX_DOCUMENT_SIZE = 50 * 1024 * 1024L;
 
     private static final Map<String, String> CONTENT_TYPE_EXTENSIONS = Map.of(
             "image/jpeg", "jpg",
@@ -37,7 +45,9 @@ public class MediaAttachmentService {
             "image/webp", "webp",
             "video/mp4", "mp4",
             "video/quicktime", "mov",
-            "video/webm", "webm"
+            "video/webm", "webm",
+            "application/pdf", "pdf",
+            "text/plain", "txt"
     );
 
     private final MediaAttachmentRepository attachmentRepository;
@@ -98,6 +108,11 @@ public class MediaAttachmentService {
         if (lower.endsWith(".webm")) return "video/webm";
         if (lower.endsWith(".png")) return "image/png";
         if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".pdf")) return "application/pdf";
+        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+        if (lower.endsWith(".txt")) return "text/plain";
         return "image/jpeg";
     }
 
@@ -121,7 +136,13 @@ public class MediaAttachmentService {
             }
             return AttachmentType.VIDEO;
         }
+        if (ALLOWED_DOCUMENT_TYPES.contains(contentType)) {
+            if (file.getSize() > MAX_DOCUMENT_SIZE) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Document size must not exceed 50MB");
+            }
+            return AttachmentType.DOCUMENT;
+        }
         throw new ApiException(HttpStatus.BAD_REQUEST,
-                "Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, MOV, WebM");
+                "Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, MOV, WebM, PDF, DOCX, XLSX, TXT");
     }
 }
