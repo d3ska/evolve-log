@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -76,8 +78,13 @@ public class MediaAttachmentController {
         MediaAttachment attachment = mediaAttachmentService.findById(id, user.getId());
         Resource resource = mediaAttachmentService.loadFile(id, user.getId());
         String contentType = mediaAttachmentService.resolveContentType(attachment);
+        String filename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "file";
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(filename, java.nio.charset.StandardCharsets.UTF_8)
+                .build();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(resource);
     }
 
