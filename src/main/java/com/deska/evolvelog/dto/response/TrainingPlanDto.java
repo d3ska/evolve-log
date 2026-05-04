@@ -13,6 +13,7 @@ public record TrainingPlanDto(
         String description,
         DayOfWeek dayOfWeek,
         boolean isActive,
+        UUID blockId,
         List<PlannedExerciseDto> plannedExercises,
         LocalDateTime createdAt
 ) {
@@ -23,6 +24,7 @@ public record TrainingPlanDto(
                 plan.getDescription(),
                 plan.getDayOfWeek(),
                 plan.isActive(),
+                plan.getBlockId(),
                 plan.getPlannedExercises().stream().map(PlannedExerciseDto::from).toList(),
                 plan.getCreatedAt()
         );
@@ -35,6 +37,7 @@ public record TrainingPlanDto(
                 plan.getDescription(),
                 plan.getDayOfWeek(),
                 plan.isActive(),
+                plan.getBlockId(),
                 List.of(),
                 plan.getCreatedAt()
         );

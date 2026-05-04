@@ -1,3 +1,14 @@
+CREATE TABLE training_blocks (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_training_blocks_user_id ON training_blocks(user_id);
+
 CREATE TABLE training_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -5,10 +16,12 @@ CREATE TABLE training_plans (
     description TEXT,
     day_of_week VARCHAR(10),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    block_id UUID REFERENCES training_blocks(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_training_plans_user_id ON training_plans(user_id);
+CREATE INDEX idx_training_plans_block_id ON training_plans(block_id);
 
 CREATE TABLE planned_exercises (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

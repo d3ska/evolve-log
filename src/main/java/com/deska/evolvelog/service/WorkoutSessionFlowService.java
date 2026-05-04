@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +53,7 @@ public class WorkoutSessionFlowService {
         TrainingPlan plan = planRepository.findByIdAndUserId(trainingPlanId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("TrainingPlan", trainingPlanId));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         WorkoutSession session = WorkoutSession.builder()
                 .user(user)
@@ -100,7 +101,7 @@ public class WorkoutSessionFlowService {
                 .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", sessionId));
 
         if (session.getFinishedAt() == null) {
-            LocalDateTime finishedAt = LocalDateTime.now();
+            LocalDateTime finishedAt = LocalDateTime.now(ZoneOffset.UTC);
             Integer duration = session.getStartedAt() != null
                     ? (int) ChronoUnit.MINUTES.between(session.getStartedAt(), finishedAt)
                     : session.getDurationMinutes();

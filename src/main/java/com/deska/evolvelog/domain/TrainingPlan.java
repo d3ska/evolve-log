@@ -35,6 +35,10 @@ public class TrainingPlan {
     @Column(name = "day_of_week", length = 10)
     private DayOfWeek dayOfWeek;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "block_id")
+    private TrainingBlock block;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean isActive = true;
@@ -50,6 +54,14 @@ public class TrainingPlan {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public UUID getBlockId() {
+        return block != null ? block.getId() : null;
+    }
+
+    public void setBlock(TrainingBlock block) {
+        this.block = block;
     }
 
     public void applyPatch(String name, String description, DayOfWeek dayOfWeek, Boolean isActive) {

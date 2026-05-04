@@ -1,7 +1,7 @@
 package com.deska.evolvelog.service;
 
-import com.deska.evolvelog.domain.ExerciseDefinition;
 import com.deska.evolvelog.domain.PlannedExercise;
+import com.deska.evolvelog.domain.TrainingBlock;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.request.CreatePlannedExerciseRequest;
@@ -11,6 +11,7 @@ import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.PlannedExerciseRepository;
+import com.deska.evolvelog.repository.TrainingBlockRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,14 +30,17 @@ public class TrainingPlanService {
     private final TrainingPlanRepository planRepository;
     private final PlannedExerciseRepository exerciseRepository;
     private final ExerciseDefinitionRepository definitionRepository;
+    private final TrainingBlockRepository blockRepository;
 
     @Transactional
     public TrainingPlan create(User user, CreateTrainingPlanRequest request) {
+        TrainingBlock block = resolveBlock(request.blockId(), user.getId());
         TrainingPlan plan = TrainingPlan.builder()
                 .user(user)
                 .name(request.name())
                 .description(request.description())
                 .dayOfWeek(request.dayOfWeek())
+                .block(block)
                 .isActive(true)
                 .build();
 
@@ -65,6 +69,10 @@ public class TrainingPlanService {
     public TrainingPlan update(UUID id, UUID userId, UpdateTrainingPlanRequest request) {
         TrainingPlan plan = findById(id, userId);
         plan.applyPatch(request.name(), request.description(), request.dayOfWeek(), request.isActive());
+        if (request.blockId() != null) {
+            TrainingBlock block = resolveBlock(request.blockId().orElse(null), userId);
+            plan.setBlock(block);
+        }
         if (request.plannedExercises() != null) {
             exerciseRepository.deleteAllByTrainingPlanId(plan.getId());
             List<PlannedExercise> newExercises = buildExercises(request.plannedExercises(), plan);
@@ -154,6 +162,14 @@ public class TrainingPlanService {
         definitionRepository.findByIdAccessibleToUser(requestedId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("ExerciseDefinition", requestedId));
         return requestedId;
+    }
+
+    private TrainingBlock resolveBlock(UUID blockId, UUID userId) {
+        if (blockId == null) {
+            return null;
+        }
+        return blockRepository.findByIdAndUserId(blockId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("TrainingBlock", blockId));
     }
 
 }

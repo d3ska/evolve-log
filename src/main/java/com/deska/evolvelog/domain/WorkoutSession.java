@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -59,7 +60,7 @@ public class WorkoutSession {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public void applyPatch(LocalDateTime date, Integer durationMinutes, String notes, TrainingPlan trainingPlan) {

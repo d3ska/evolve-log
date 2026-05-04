@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.DayOfWeek;
 import java.util.List;
+import java.util.UUID;
 
 public record CreateTrainingPlanRequest(
         @NotBlank(message = "Name is required")
@@ -15,6 +16,8 @@ public record CreateTrainingPlanRequest(
         String description,
 
         DayOfWeek dayOfWeek,
+
+        UUID blockId,
 
         @Valid
         List<CreatePlannedExerciseRequest> plannedExercises
