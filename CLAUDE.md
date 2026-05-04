@@ -156,6 +156,7 @@ Active changes (in-progress):
 - `openspec/changes/active-workout-module/`
 - `openspec/changes/i18n-foundation/`
 - `openspec/changes/supplement-ux-redesign/`
+- `openspec/changes/training-block/`
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
 - `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
@@ -234,7 +235,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | Users & Auth | `users`, Google OAuth, JWT-less session | Google OAuth via Spring Security |
 | Measurements | `measurements` | Flexible body metrics (weight, BF%, limbs, custom) |
 | Workout | `workout_sessions`, `exercises`, `workout_sets`, `exercise_definitions`, `planned_exercises` | Sessions → exercises → sets hierarchy; exercise_definition_id auto-linked by name match |
-| Training Plans | `training_plans`, `planned_exercises` | Templates for workouts |
+| Training Plans | `training_plans`, `planned_exercises`, `training_blocks` | Templates for workouts; blocks group plans into training cycles |
 | Health Metrics | `health_metrics` | Generic EAV: `(user_id, source, date, metric_key, value)` |
 | Withings | `withings_tokens` | OAuth token storage; sync via `WithingsMetricProvider` |
 | Fitatu | `fitatu_food_logs` | CSV-imported nutrition data, JSONB nutrients |
