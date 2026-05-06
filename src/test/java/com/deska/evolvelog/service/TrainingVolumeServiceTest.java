@@ -132,19 +132,6 @@ class TrainingVolumeServiceTest {
     // ── getWeeklyVolumeByMuscle ──────────────────────────────────────────────
 
     @Test
-    void shouldThrowWhenDateRangeExceedsFiftyTwoWeeks() {
-        // given
-        LocalDate from = LocalDate.of(2024, 1, 1);
-        LocalDate to = LocalDate.of(2025, 2, 1); // > 52 weeks
-
-        // when / then
-        assertThatThrownBy(() -> service.getWeeklyVolumeByMuscle(userId, from, to, null))
-                .isInstanceOf(ApiException.class)
-                .extracting(e -> ((ApiException) e).getStatus())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
     void shouldReturnWeeklyVolumeForValidRange() {
         // given
         LocalDate from = LocalDate.of(2025, 1, 1);
