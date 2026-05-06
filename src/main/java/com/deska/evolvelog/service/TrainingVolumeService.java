@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +23,6 @@ import java.util.UUID;
 
 @Service
 public class TrainingVolumeService {
-
-    private static final int MAX_WEEKS = 52;
 
     private final ExerciseRepository exerciseRepository;
 
@@ -100,11 +97,12 @@ public class TrainingVolumeService {
 
     @Transactional(readOnly = true)
     public List<WeeklyMuscleVolumeDto> getWeeklyVolumeByMuscle(UUID userId, LocalDate from, LocalDate to, String muscle) {
-        long weeks = ChronoUnit.WEEKS.between(from, to);
-        if (weeks > MAX_WEEKS) {
-            throw new ApiException(HttpStatus.BAD_REQUEST,
-                    "Date range must not exceed " + MAX_WEEKS + " weeks");
-        }
+//        TODO: Removed temporarily
+//        long weeks = ChronoUnit.WEEKS.between(from, to);
+//        if (weeks > MAX_WEEKS) {
+//            throw new ApiException(HttpStatus.BAD_REQUEST,
+//                    "Date range must not exceed " + MAX_WEEKS + " weeks");
+//        }
 
         LocalDateTime fromDt = from.atStartOfDay();
         LocalDateTime toDt = to.plusDays(1).atStartOfDay();
