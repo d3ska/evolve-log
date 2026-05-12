@@ -106,4 +106,14 @@ public class TrainingPlanController {
         planService.deleteExercise(planId, exerciseId, user.getId());
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{planId}/sync-from-session/{sessionId}")
+    public ResponseEntity<ApiResponse<TrainingPlanDto>> syncFromSession(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID planId,
+            @PathVariable UUID sessionId
+    ) {
+        TrainingPlanDto dto = TrainingPlanDto.from(planService.syncFromSession(planId, sessionId, user.getId()));
+        return ResponseEntity.ok(ApiResponse.success(dto));
+    }
 }

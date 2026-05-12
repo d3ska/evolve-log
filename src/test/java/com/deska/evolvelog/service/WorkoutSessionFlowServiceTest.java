@@ -7,18 +7,22 @@ import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
 import com.deska.evolvelog.dto.response.MuscleGroupVolumeDto;
+import com.deska.evolvelog.dto.response.PlanSnapshotEntry;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -50,6 +54,9 @@ class WorkoutSessionFlowServiceTest {
 
     @Mock
     private TrainingVolumeService volumeService;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private WorkoutSessionFlowService service;
@@ -174,6 +181,46 @@ class WorkoutSessionFlowServiceTest {
         // when / then
         assertThatThrownBy(() -> service.startFromPlan(user, planId))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void shouldSetPlanSnapshotAndPlannedExerciseIdOnStart() throws Exception {
+        // given
+        UUID peId = UUID.randomUUID();
+        PlannedExercise pe = PlannedExercise.builder()
+                .id(peId)
+                .trainingPlan(plan)
+                .name("Bench Press")
+                .sets(3)
+                .repsMin(8)
+                .repsMax(12)
+                .restSeconds(90)
+                .position(0)
+                .build();
+        TrainingPlan planWithExercises = TrainingPlan.builder()
+                .id(planId).user(user).name("Push Day")
+                .plannedExercises(List.of(pe)).build();
+
+        when(planRepository.findByIdAndUserId(planId, userId)).thenReturn(Optional.of(planWithExercises));
+        when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        WorkoutSession result = service.startFromPlan(user, planId);
+
+        // then — snapshot is set and contains the planned exercise
+        assertThat(result.getPlanSnapshot()).isNotNull();
+        List<PlanSnapshotEntry> entries = new ObjectMapper().readValue(
+                result.getPlanSnapshot(), new TypeReference<>() {});
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).plannedExerciseId()).isEqualTo(peId);
+        assertThat(entries.get(0).name()).isEqualTo("Bench Press");
+        assertThat(entries.get(0).sets()).isEqualTo(3);
+        assertThat(entries.get(0).repsMin()).isEqualTo(8);
+        assertThat(entries.get(0).repsMax()).isEqualTo(12);
+
+        // then — exercise has plannedExerciseId set
+        assertThat(result.getExercises()).hasSize(1);
+        assertThat(result.getExercises().get(0).getPlannedExerciseId()).isEqualTo(peId);
     }
 
     // ── finishSession ─────────────────────────────────────────────────────────

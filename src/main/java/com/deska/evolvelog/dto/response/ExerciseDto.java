@@ -14,7 +14,8 @@ public record ExerciseDto(
         BigDecimal weightKg,
         String notes,
         Integer position,
-        List<WorkoutSetDto> workoutSets
+        List<WorkoutSetDto> workoutSets,
+        UUID plannedExerciseId
 ) {
     public static ExerciseDto from(Exercise e) {
         List<WorkoutSetDto> setDtos = e.getWorkoutSets().stream()
@@ -28,7 +29,8 @@ public record ExerciseDto(
                 e.getWeightKg(),
                 e.getNotes(),
                 e.getPosition(),
-                setDtos
+                setDtos,
+                e.getPlannedExerciseId()
         );
     }
 }

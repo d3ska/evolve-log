@@ -15,8 +15,10 @@ import com.deska.evolvelog.dto.request.UpdateExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateWorkoutSessionRequest;
 import com.deska.evolvelog.dto.response.ExerciseDto;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
+import com.deska.evolvelog.dto.response.SessionDeviationDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
 import com.deska.evolvelog.dto.response.WorkoutSetDto;
+import com.deska.evolvelog.service.WorkoutDeviationService;
 import com.deska.evolvelog.service.WorkoutService;
 import com.deska.evolvelog.service.WorkoutSessionFlowService;
 import com.deska.evolvelog.service.WorkoutSetService;
@@ -37,12 +39,14 @@ public class WorkoutController {
     private final WorkoutService workoutService;
     private final WorkoutSessionFlowService flowService;
     private final WorkoutSetService workoutSetService;
+    private final WorkoutDeviationService deviationService;
 
     public WorkoutController(WorkoutService workoutService, WorkoutSessionFlowService flowService,
-                             WorkoutSetService workoutSetService) {
+                             WorkoutSetService workoutSetService, WorkoutDeviationService deviationService) {
         this.workoutService = workoutService;
         this.flowService = flowService;
         this.workoutSetService = workoutSetService;
+        this.deviationService = deviationService;
     }
 
     @PostMapping
@@ -190,6 +194,15 @@ public class WorkoutController {
         WorkoutSession session = flowService.startFromPlan(user, request.trainingPlanId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(WorkoutSessionDto.from(session)));
+    }
+
+    @GetMapping("/sessions/{id}/deviations")
+    public ResponseEntity<ApiResponse<SessionDeviationDto>> getDeviations(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+
+        SessionDeviationDto result = deviationService.getDeviations(id, user.getId());
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @PostMapping("/sessions/{id}/finish")

@@ -3,6 +3,8 @@ package com.deska.evolvelog.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -49,6 +51,10 @@ public class WorkoutSession {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "plan_snapshot", columnDefinition = "jsonb")
+    private String planSnapshot;
+
     @Builder.Default
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
@@ -78,5 +84,9 @@ public class WorkoutSession {
 
     public void activate() {
         this.status = WorkoutSessionStatus.ACTIVE;
+    }
+
+    public void setPlanSnapshot(String planSnapshot) {
+        this.planSnapshot = planSnapshot;
     }
 }

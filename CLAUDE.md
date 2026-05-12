@@ -157,6 +157,7 @@ Active changes (in-progress):
 - `openspec/changes/i18n-foundation/`
 - `openspec/changes/supplement-ux-redesign/`
 - `openspec/changes/training-block/`
+- `openspec/changes/plan-session-deviations/`
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
 - `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
@@ -220,6 +221,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V18 | AI feature (ai_settings, ai_insights, ai_chat_history, monthly_exercise_aggregates) |
 | V19 | Consolidate exercise data (migrate exercise-level reps/weight into workout_sets) |
 | V20 | Active workout module (session status lifecycle, per-set completion flag) |
+| V21 | Plan-session deviations (`exercises.planned_exercise_id`, `workout_sessions.plan_snapshot JSONB`) |
 
 **Migration rules:**
 - Never modify an existing migration. Always add a new versioned file.
@@ -234,7 +236,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 |---|---|---|
 | Users & Auth | `users`, Google OAuth, JWT-less session | Google OAuth via Spring Security |
 | Measurements | `measurements` | Flexible body metrics (weight, BF%, limbs, custom) |
-| Workout | `workout_sessions`, `exercises`, `workout_sets`, `exercise_definitions`, `planned_exercises` | Sessions → exercises → sets hierarchy; exercise_definition_id auto-linked by name match |
+| Workout | `workout_sessions`, `exercises`, `workout_sets`, `exercise_definitions`, `planned_exercises` | Sessions → exercises → sets hierarchy; exercise_definition_id auto-linked by name match; `plan_snapshot` JSONB captures planned exercises at session start; `exercises.planned_exercise_id` links each exercise back to its planned counterpart |
 | Training Plans | `training_plans`, `planned_exercises`, `training_blocks` | Templates for workouts; blocks group plans into training cycles |
 | Health Metrics | `health_metrics` | Generic EAV: `(user_id, source, date, metric_key, value)` |
 | Withings | `withings_tokens` | OAuth token storage; sync via `WithingsMetricProvider` |

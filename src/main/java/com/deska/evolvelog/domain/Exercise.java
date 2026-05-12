@@ -47,6 +47,9 @@ public class Exercise {
     @Column(name = "exercise_definition_id")
     private UUID exerciseDefinitionId;
 
+    @Column(name = "planned_exercise_id")
+    private UUID plannedExerciseId;
+
     @Column(precision = 3, scale = 1)
     private BigDecimal rpe;
 

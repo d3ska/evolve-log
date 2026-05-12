@@ -1,26 +1,40 @@
 package com.deska.evolvelog.service;
 
+import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingBlock;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
+import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSessionStatus;
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.request.CreatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateTrainingPlanRequest;
 import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
+import com.deska.evolvelog.dto.response.PlanSnapshotEntry;
+import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.PlannedExerciseRepository;
 import com.deska.evolvelog.repository.TrainingBlockRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
+import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +45,8 @@ public class TrainingPlanService {
     private final PlannedExerciseRepository exerciseRepository;
     private final ExerciseDefinitionRepository definitionRepository;
     private final TrainingBlockRepository blockRepository;
+    private final WorkoutSessionRepository sessionRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public TrainingPlan create(User user, CreateTrainingPlanRequest request) {
@@ -132,6 +148,86 @@ public class TrainingPlanService {
         PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
         exerciseRepository.delete(exercise);
+    }
+
+    @Transactional
+    public TrainingPlan syncFromSession(UUID planId, UUID sessionId, UUID userId) {
+        WorkoutSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", sessionId));
+
+        if (session.getStatus() == WorkoutSessionStatus.ACTIVE) {
+            throw new ApiException(HttpStatus.CONFLICT, "Cannot sync from an active session — finish the session first");
+        }
+
+        TrainingPlan plan = findById(planId, userId);
+        Map<UUID, PlanSnapshotEntry> snapshotByPlannedId = parseSnapshotMap(session.getPlanSnapshot());
+
+        exerciseRepository.deleteAllByTrainingPlanId(planId);
+        plan.getPlannedExercises().clear();
+
+        List<Exercise> sessionExercises = session.getExercises();
+        List<PlannedExercise> newExercises = new ArrayList<>();
+
+        for (Exercise ex : sessionExercises) {
+            int[] reps = deriveReps(ex, snapshotByPlannedId);
+            newExercises.add(PlannedExercise.builder()
+                    .trainingPlan(plan)
+                    .name(ex.getName())
+                    .sets(ex.getSets() != null ? ex.getSets() : 1)
+                    .repsMin(reps[0])
+                    .repsMax(reps[1])
+                    .position(ex.getPosition() != null ? ex.getPosition() : newExercises.size())
+                    .exerciseDefinitionId(ex.getExerciseDefinitionId())
+                    .build());
+        }
+
+        plan.getPlannedExercises().addAll(newExercises);
+        return planRepository.save(plan);
+    }
+
+    private int[] deriveReps(Exercise exercise, Map<UUID, PlanSnapshotEntry> snapshotByPlannedId) {
+        // Try modal reps from workout_sets
+        List<Integer> repsValues = exercise.getWorkoutSets().stream()
+                .map(WorkoutSet::getReps)
+                .filter(r -> r != null)
+                .toList();
+
+        if (!repsValues.isEmpty()) {
+            int modal = repsValues.stream()
+                    .collect(Collectors.groupingBy(r -> r, Collectors.counting()))
+                    .entrySet().stream()
+                    .max(Comparator.comparingLong(Map.Entry::getValue))
+                    .map(Map.Entry::getKey)
+                    .orElse(0);
+            return new int[]{modal, modal};
+        }
+
+        // Fallback: snapshot entry for this exercise
+        if (exercise.getPlannedExerciseId() != null) {
+            PlanSnapshotEntry entry = snapshotByPlannedId.get(exercise.getPlannedExerciseId());
+            if (entry != null) {
+                return new int[]{
+                        entry.repsMin() != null ? entry.repsMin() : 0,
+                        entry.repsMax() != null ? entry.repsMax() : 0
+                };
+            }
+        }
+
+        return new int[]{0, 0};
+    }
+
+    private Map<UUID, PlanSnapshotEntry> parseSnapshotMap(String json) {
+        if (json == null) {
+            return Collections.emptyMap();
+        }
+        try {
+            List<PlanSnapshotEntry> entries = objectMapper.readValue(json, new TypeReference<List<PlanSnapshotEntry>>() {});
+            return entries.stream()
+                    .filter(e -> e.plannedExerciseId() != null)
+                    .collect(Collectors.toMap(PlanSnapshotEntry::plannedExerciseId, e -> e));
+        } catch (Exception e) {
+            return Collections.emptyMap();
+        }
     }
 
     private List<PlannedExercise> buildExercises(List<CreatePlannedExerciseRequest> requests, TrainingPlan plan) {

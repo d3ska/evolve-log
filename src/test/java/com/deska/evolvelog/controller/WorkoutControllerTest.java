@@ -2,11 +2,14 @@ package com.deska.evolvelog.controller;
 
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.dto.response.DeviationEntryDto;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
+import com.deska.evolvelog.dto.response.SessionDeviationDto;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
 import com.deska.evolvelog.exception.GlobalExceptionHandler;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.service.WorkoutDeviationService;
 import com.deska.evolvelog.service.WorkoutService;
 import com.deska.evolvelog.service.WorkoutSessionFlowService;
 import com.deska.evolvelog.service.WorkoutSetService;
@@ -33,6 +36,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -49,6 +53,9 @@ class WorkoutControllerTest {
     @Mock
     private WorkoutSetService workoutSetService;
 
+    @Mock
+    private WorkoutDeviationService deviationService;
+
     private MockMvc mockMvc;
     private User mockUser;
     private UUID userId;
@@ -63,7 +70,7 @@ class WorkoutControllerTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        var controller = new WorkoutController(workoutService, flowService, workoutSetService);
+        var controller = new WorkoutController(workoutService, flowService, workoutSetService, deviationService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver())
@@ -170,6 +177,49 @@ class WorkoutControllerTest {
         mockMvc.perform(post("/api/workouts/sessions/{id}/finish", sessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    // ── GET /sessions/{id}/deviations ─────────────────────────────────────────
+
+    @Test
+    void shouldReturn200WithDeviationEntries() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID peId = UUID.randomUUID();
+        DeviationEntryDto entry = new DeviationEntryDto("SKIPPED", peId, "Squat", 4, 5, 8, null, null);
+        SessionDeviationDto dto = new SessionDeviationDto(sessionId, true, List.of(entry));
+
+        when(deviationService.getDeviations(eq(sessionId), eq(userId))).thenReturn(dto);
+
+        mockMvc.perform(get("/api/workouts/sessions/{id}/deviations", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.supported").value(true))
+                .andExpect(jsonPath("$.data.entries[0].status").value("SKIPPED"))
+                .andExpect(jsonPath("$.data.entries[0].name").value("Squat"));
+    }
+
+    @Test
+    void shouldReturn200WithUnsupportedWhenNoSnapshot() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        SessionDeviationDto dto = new SessionDeviationDto(sessionId, false, List.of());
+
+        when(deviationService.getDeviations(eq(sessionId), eq(userId))).thenReturn(dto);
+
+        mockMvc.perform(get("/api/workouts/sessions/{id}/deviations", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.supported").value(false))
+                .andExpect(jsonPath("$.data.entries").isEmpty());
+    }
+
+    @Test
+    void shouldReturn404WhenDeviationsRequestedForOtherUsersSession() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        when(deviationService.getDeviations(eq(sessionId), eq(userId)))
+                .thenThrow(new ResourceNotFoundException("WorkoutSession", sessionId));
+
+        mockMvc.perform(get("/api/workouts/sessions/{id}/deviations", sessionId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     private HandlerMethodArgumentResolver principalResolver() {

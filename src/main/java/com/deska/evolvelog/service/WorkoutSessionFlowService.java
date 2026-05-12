@@ -9,6 +9,7 @@ import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.domain.WorkoutSessionStatus;
 import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.dto.response.FinishedSessionDto;
+import com.deska.evolvelog.dto.response.PlanSnapshotEntry;
 import com.deska.evolvelog.dto.response.SessionVolumeSummaryDto;
 import com.deska.evolvelog.dto.response.WorkoutSessionDto;
 import com.deska.evolvelog.exception.ApiException;
@@ -17,6 +18,8 @@ import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.ExerciseRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,6 +46,7 @@ public class WorkoutSessionFlowService {
     private final ExerciseDefinitionRepository definitionRepository;
     private final ExerciseRepository exerciseRepository;
     private final TrainingVolumeService volumeService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public WorkoutSession startFromPlan(User user, UUID trainingPlanId) {
@@ -65,6 +69,13 @@ public class WorkoutSessionFlowService {
 
         List<PlannedExercise> plannedExercises = plan.getPlannedExercises();
         if (!plannedExercises.isEmpty()) {
+            List<PlanSnapshotEntry> snapshotEntries = plannedExercises.stream()
+                    .map(pe -> new PlanSnapshotEntry(
+                            pe.getId(), pe.getName(), pe.getSets(),
+                            pe.getRepsMin(), pe.getRepsMax(), pe.getRestSeconds(), pe.getPosition()))
+                    .toList();
+            session.setPlanSnapshot(serializeSnapshot(snapshotEntries));
+
             Map<UUID, ExerciseDefinition> definitions = loadDefinitions(plannedExercises);
             List<Exercise> exercises = new ArrayList<>();
             for (PlannedExercise pe : plannedExercises) {
@@ -80,6 +91,7 @@ public class WorkoutSessionFlowService {
                         .position(pe.getPosition())
                         .exerciseDefinitionId(pe.getExerciseDefinitionId())
                         .primaryMuscle(def != null ? def.getPrimaryMuscle() : null)
+                        .plannedExerciseId(pe.getId())
                         .build();
                 for (int i = 1; i <= pe.getSets(); i++) {
                     exercise.getWorkoutSets().add(WorkoutSet.builder()
@@ -147,6 +159,14 @@ public class WorkoutSessionFlowService {
         Exercise exercise = exerciseRepository.findByIdAndWorkoutSessionUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exercise", exerciseId));
         exerciseRepository.delete(exercise);
+    }
+
+    private String serializeSnapshot(List<PlanSnapshotEntry> entries) {
+        try {
+            return objectMapper.writeValueAsString(entries);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize plan snapshot", e);
+        }
     }
 
     private Map<UUID, ExerciseDefinition> loadDefinitions(List<PlannedExercise> plannedExercises) {
