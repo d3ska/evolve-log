@@ -23,7 +23,8 @@ public class GoogleOAuth2UserService extends OidcUserService {
         OidcUser oidcUser = super.loadUser(userRequest);
 
         //TODO: Do a proper ACL
-        if (!"mateuszdeska00@gmail.com".equals(oidcUser.getEmail())) {
+        if (!"mateuszdeska00@gmail.com".equals(oidcUser.getEmail())
+                || !"natalia.walek32@gmail.com".equals(oidcUser.getEmail())) {
             throw new OAuth2AuthenticationException("Email not authorized: " + oidcUser.getEmail());
         }
 
