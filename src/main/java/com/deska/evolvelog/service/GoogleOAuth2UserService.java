@@ -9,10 +9,17 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
+
 @Service
 public class GoogleOAuth2UserService extends OidcUserService {
 
     private final UserRepository userRepository;
+
+    private final Set<String> ALLOWED_USERS = Set.of(
+            "mateuszdeska00@gmail.com",
+            "natalia.walek32@gmail.com"
+    );
 
     public GoogleOAuth2UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -22,9 +29,7 @@ public class GoogleOAuth2UserService extends OidcUserService {
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
         OidcUser oidcUser = super.loadUser(userRequest);
 
-        //TODO: Do a proper ACL
-        if (!"mateuszdeska00@gmail.com".equals(oidcUser.getEmail())
-                || !"natalia.walek32@gmail.com".equals(oidcUser.getEmail())) {
+        if (!ALLOWED_USERS.contains(oidcUser.getEmail())) {
             throw new OAuth2AuthenticationException("Email not authorized: " + oidcUser.getEmail());
         }
 
