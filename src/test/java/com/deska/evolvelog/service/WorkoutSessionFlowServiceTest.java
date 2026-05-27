@@ -284,4 +284,37 @@ class WorkoutSessionFlowServiceTest {
         assertThatThrownBy(() -> service.finishSession(sessionId, userId))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    // ── planVersion stamping ──────────────────────────────────────────────────
+
+    @Test
+    void startFromPlan_stampsPlanVersionOnSession() {
+        // given — plan with currentVersion=1 (default)
+        when(planRepository.findByIdAndUserId(planId, userId)).thenReturn(Optional.of(plan));
+        when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        WorkoutSession result = service.startFromPlan(user, planId);
+
+        // then
+        assertThat(result.getPlanVersion()).isEqualTo(plan.getCurrentVersion());
+    }
+
+    @Test
+    void startFromPlan_stampsCorrectPlanVersion_whenVersionIsHigherThanOne() {
+        // given — plan with currentVersion=3
+        TrainingPlan planV3 = TrainingPlan.builder()
+                .id(planId).user(user).name("Push Day").build();
+        planV3.incrementVersion(); // 2
+        planV3.incrementVersion(); // 3
+
+        when(planRepository.findByIdAndUserId(planId, userId)).thenReturn(Optional.of(planV3));
+        when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        WorkoutSession result = service.startFromPlan(user, planId);
+
+        // then
+        assertThat(result.getPlanVersion()).isEqualTo(3);
+    }
 }

@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -110,6 +111,68 @@ class WorkoutSetServiceTest {
 
         assertThat(result.getReps()).isEqualTo(8);
         assertThat(result.getWeightKg()).isEqualByComparingTo("60.00");
+        assertThat(result.isCompleted()).isFalse();
+    }
+
+    @Test
+    void updateSet_shouldStampCompletedAtWhenCompleting() {
+        WorkoutSet ws = WorkoutSet.builder()
+                .setNumber(1).reps(8).weightKg(new BigDecimal("60.00")).build();
+        when(setRepository.findByIdAndUserId(setId, userId)).thenReturn(Optional.of(ws));
+        when(setRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Instant before = Instant.now();
+        WorkoutSet result = service.updateSet(setId, userId, null, null, true);
+        Instant after = Instant.now();
+
+        assertThat(result.isCompleted()).isTrue();
+        assertThat(result.getCompletedAt()).isNotNull();
+        assertThat(result.getCompletedAt()).isBetween(before, after);
+    }
+
+    @Test
+    void updateSet_shouldPreserveCompletedAtWhenUncompleting() {
+        WorkoutSet ws = WorkoutSet.builder()
+                .setNumber(1).reps(8).weightKg(new BigDecimal("60.00")).build();
+        ws.update(null, null, true); // stamp completedAt first
+        Instant originalStamp = ws.getCompletedAt();
+        when(setRepository.findByIdAndUserId(setId, userId)).thenReturn(Optional.of(ws));
+        when(setRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkoutSet result = service.updateSet(setId, userId, null, null, false);
+
+        assertThat(result.isCompleted()).isFalse();
+        // completedAt is preserved so the rest timer continues from the original stamp
+        assertThat(result.getCompletedAt()).isEqualTo(originalStamp);
+    }
+
+    @Test
+    void updateSet_shouldKeepOriginalCompletedAtOnReComplete() {
+        WorkoutSet ws = WorkoutSet.builder()
+                .setNumber(1).reps(8).weightKg(new BigDecimal("60.00")).build();
+        ws.update(null, null, true);  // first complete — stamps completedAt
+        Instant originalStamp = ws.getCompletedAt();
+        ws.update(null, null, false); // uncomplete — preserves completedAt
+        when(setRepository.findByIdAndUserId(setId, userId)).thenReturn(Optional.of(ws));
+        when(setRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkoutSet result = service.updateSet(setId, userId, null, null, true); // re-complete
+
+        assertThat(result.isCompleted()).isTrue();
+        // completedAt is not re-stamped; original value is kept
+        assertThat(result.getCompletedAt()).isEqualTo(originalStamp);
+    }
+
+    @Test
+    void updateSet_repsOrWeightOnlyDoesNotStampCompletedAt() {
+        WorkoutSet ws = WorkoutSet.builder()
+                .setNumber(1).build();
+        when(setRepository.findByIdAndUserId(setId, userId)).thenReturn(Optional.of(ws));
+        when(setRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkoutSet result = service.updateSet(setId, userId, 10, new BigDecimal("80.00"), null);
+
+        assertThat(result.getCompletedAt()).isNull();
         assertThat(result.isCompleted()).isFalse();
     }
 

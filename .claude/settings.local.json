@@ -17,7 +17,10 @@
       "Bash(npx pwa-assets-generator:*)",
       "Bash(mkdir -p openspec/changes/archive)",
       "Bash(mv openspec/changes/pwa-assets openspec/changes/archive/2026-04-30-pwa-assets)",
-      "Bash(mv openspec/changes/data-sync-idempotency openspec/changes/archive/2026-04-30-data-sync-idempotency)"
+      "Bash(mv openspec/changes/data-sync-idempotency openspec/changes/archive/2026-04-30-data-sync-idempotency)",
+      "Bash(openspec new:*)",
+      "Bash(openspec instructions:*)",
+      "Bash(./gradlew build:*)"
     ]
   }
 }

@@ -44,6 +44,10 @@ public class TrainingPlan {
     private boolean isActive = true;
 
     @Builder.Default
+    @Column(name = "current_version", nullable = false)
+    private int currentVersion = 1;
+
+    @Builder.Default
     @OneToMany(mappedBy = "trainingPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<PlannedExercise> plannedExercises = new ArrayList<>();
@@ -62,6 +66,10 @@ public class TrainingPlan {
 
     public void setBlock(TrainingBlock block) {
         this.block = block;
+    }
+
+    public void incrementVersion() {
+        this.currentVersion++;
     }
 
     public void applyPatch(String name, String description, DayOfWeek dayOfWeek, Boolean isActive) {

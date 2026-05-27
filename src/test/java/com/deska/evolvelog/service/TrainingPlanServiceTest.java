@@ -1,6 +1,7 @@
 package com.deska.evolvelog.service;
 
 import com.deska.evolvelog.domain.Exercise;
+import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingBlock;
 import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.User;
@@ -12,15 +13,20 @@ import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
 import com.deska.evolvelog.dto.response.PlanSnapshotEntry;
 import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
+import com.deska.evolvelog.domain.TrainingPlanVersion;
+import com.deska.evolvelog.dto.request.CreatePlannedExerciseRequest;
+import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
 import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.PlannedExerciseRepository;
 import com.deska.evolvelog.repository.TrainingBlockRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
+import com.deska.evolvelog.repository.TrainingPlanVersionRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -46,6 +52,7 @@ class TrainingPlanServiceTest {
     @Mock ExerciseDefinitionRepository definitionRepository;
     @Mock TrainingBlockRepository blockRepository;
     @Mock WorkoutSessionRepository sessionRepository;
+    @Mock TrainingPlanVersionRepository versionRepository;
 
     @Spy
     ObjectMapper objectMapper = new ObjectMapper();
@@ -221,6 +228,107 @@ class TrainingPlanServiceTest {
         var planned = result.getPlannedExercises().get(0);
         assertThat(planned.getRepsMin()).isEqualTo(5);
         assertThat(planned.getRepsMax()).isEqualTo(8);
+    }
+
+    // ── Plan Versioning ───────────────────────────────────────────────────────
+
+    @Test
+    void create_insertsVersionRowWithVersion1() {
+        var req = new CreateTrainingPlanRequest("Plan", null, null, null, null);
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(user, req);
+
+        ArgumentCaptor<TrainingPlanVersion> captor = ArgumentCaptor.forClass(TrainingPlanVersion.class);
+        verify(versionRepository).save(captor.capture());
+        assertThat(captor.getValue().getVersion()).isEqualTo(1);
+        assertThat(captor.getValue().getExercises()).isEqualTo("[]");
+    }
+
+    @Test
+    void addExercise_bumpsVersion() {
+        var plan = buildPlan(user, null);
+        UUID planId = plan.getId();
+
+        when(planRepository.findByIdAndUserId(planId, user.getId())).thenReturn(Optional.of(plan));
+        when(exerciseRepository.countByTrainingPlanId(planId)).thenReturn(0);
+        when(exerciseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new CreatePlannedExerciseRequest("Squat", 3, 5, 8, 90, 0, null, null);
+        service.addExercise(planId, user.getId(), req);
+
+        verify(versionRepository).save(any(TrainingPlanVersion.class));
+        assertThat(plan.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void deleteExercise_bumpsVersion() {
+        var exercise = PlannedExercise.builder()
+                .id(UUID.randomUUID()).trainingPlan(buildPlan(user, null))
+                .name("Squat").sets(3).repsMin(5).repsMax(8).position(0).build();
+        var plan = TrainingPlan.builder()
+                .id(UUID.randomUUID()).user(user).name("Plan").isActive(true)
+                .plannedExercises(List.of(exercise)).build();
+
+        when(planRepository.findByIdAndUserId(plan.getId(), user.getId())).thenReturn(Optional.of(plan));
+        when(exerciseRepository.findByIdAndUserId(exercise.getId(), user.getId())).thenReturn(Optional.of(exercise));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.deleteExercise(plan.getId(), exercise.getId(), user.getId());
+
+        verify(versionRepository).save(any(TrainingPlanVersion.class));
+        assertThat(plan.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void updateExercise_bumpsVersion() {
+        var exercise = PlannedExercise.builder()
+                .id(UUID.randomUUID()).trainingPlan(buildPlan(user, null))
+                .name("Squat").sets(3).repsMin(5).repsMax(8).position(0).build();
+        var plan = TrainingPlan.builder()
+                .id(UUID.randomUUID()).user(user).name("Plan").isActive(true)
+                .plannedExercises(List.of(exercise)).build();
+
+        when(planRepository.findByIdAndUserId(plan.getId(), user.getId())).thenReturn(Optional.of(plan));
+        when(exerciseRepository.findByIdAndUserId(exercise.getId(), user.getId())).thenReturn(Optional.of(exercise));
+        when(exerciseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new UpdatePlannedExerciseRequest("Squat", 4, 5, 8, 90, 0, null, null);
+        service.updateExercise(plan.getId(), exercise.getId(), user.getId(), req);
+
+        verify(versionRepository).save(any(TrainingPlanVersion.class));
+        assertThat(plan.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void update_withExercises_bumpsVersion() {
+        var plan = buildPlan(user, null);
+
+        when(planRepository.findByIdAndUserId(plan.getId(), user.getId())).thenReturn(Optional.of(plan));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new UpdateTrainingPlanRequest(null, null, null, null, null,
+                List.of(new CreatePlannedExerciseRequest("Squat", 3, 5, 8, null, 0, null, null)));
+        service.update(plan.getId(), user.getId(), req);
+
+        verify(versionRepository).save(any(TrainingPlanVersion.class));
+        assertThat(plan.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void update_metadataOnly_doesNotBumpVersion() {
+        var plan = buildPlan(user, null);
+
+        when(planRepository.findByIdAndUserId(plan.getId(), user.getId())).thenReturn(Optional.of(plan));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // plannedExercises = null means metadata-only patch
+        var req = new UpdateTrainingPlanRequest("New Name", null, null, null, Optional.empty(), null);
+        service.update(plan.getId(), user.getId(), req);
+
+        verify(versionRepository, never()).save(any());
     }
 
     @Test

@@ -55,6 +55,9 @@ public class WorkoutSession {
     @Column(name = "plan_snapshot", columnDefinition = "jsonb")
     private String planSnapshot;
 
+    @Column(name = "plan_version")
+    private Integer planVersion;
+
     @Builder.Default
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
@@ -88,5 +91,9 @@ public class WorkoutSession {
 
     public void setPlanSnapshot(String planSnapshot) {
         this.planSnapshot = planSnapshot;
+    }
+
+    public void setPlanVersion(Integer planVersion) {
+        this.planVersion = planVersion;
     }
 }

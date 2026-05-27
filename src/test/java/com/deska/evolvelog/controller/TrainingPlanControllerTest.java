@@ -1,11 +1,13 @@
 package com.deska.evolvelog.controller;
 
 import com.deska.evolvelog.domain.TrainingPlan;
+import com.deska.evolvelog.domain.TrainingPlanVersion;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.exception.GlobalExceptionHandler;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
 import com.deska.evolvelog.service.TrainingPlanService;
+import com.deska.evolvelog.service.TrainingPlanVersionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,6 +39,9 @@ class TrainingPlanControllerTest {
 
     @Mock
     TrainingPlanService planService;
+
+    @Mock
+    TrainingPlanVersionService versionService;
 
     private MockMvc mockMvc;
     private User mockUser;
@@ -51,7 +57,7 @@ class TrainingPlanControllerTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        var controller = new TrainingPlanController(planService);
+        var controller = new TrainingPlanController(planService, versionService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver())
@@ -102,6 +108,45 @@ class TrainingPlanControllerTest {
         mockMvc.perform(post("/api/training-plans/{planId}/sync-from-session/{sessionId}", planId, sessionId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    // ── GET /{id}/versions ────────────────────────────────────────────────────
+
+    @Test
+    void getVersions_returnsEmptyList_whenNoPlanVersionRows() throws Exception {
+        UUID planId = UUID.randomUUID();
+        when(versionService.listVersions(eq(planId), eq(userId))).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/training-plans/{id}/versions", planId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    void getVersion_returns404_whenVersionDoesNotExist() throws Exception {
+        UUID planId = UUID.randomUUID();
+        when(versionService.getVersion(eq(planId), eq(1), eq(userId)))
+                .thenThrow(new ResourceNotFoundException("TrainingPlanVersion", planId));
+
+        mockMvc.perform(get("/api/training-plans/{id}/versions/{version}", planId, 1))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void getVersions_returnsSummaries_withExerciseCount() throws Exception {
+        UUID planId = UUID.randomUUID();
+        TrainingPlanVersion v = TrainingPlanVersion.builder()
+                .trainingPlanId(planId).version(1).exercises("[]").build();
+        when(versionService.listVersions(eq(planId), eq(userId))).thenReturn(List.of(v));
+
+        mockMvc.perform(get("/api/training-plans/{id}/versions", planId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].version").value(1))
+                .andExpect(jsonPath("$.data[0].exerciseCount").value(0))
+                .andExpect(jsonPath("$.data[0].exercises").doesNotExist());
     }
 
     private HandlerMethodArgumentResolver principalResolver() {

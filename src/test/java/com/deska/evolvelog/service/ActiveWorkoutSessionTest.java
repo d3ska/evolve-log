@@ -25,6 +25,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -225,6 +226,55 @@ class ActiveWorkoutSessionTest {
         workoutSetService.deleteSet(ws.getId(), user.getId());
 
         assertThat(workoutSetRepository.findById(ws.getId())).isEmpty();
+    }
+
+    // ── Rest timer: completedAt stamping ─────────────────────────────────────
+
+    @Test
+    void updateSet_shouldStampCompletedAtWhenMarkedComplete() {
+        WorkoutSession session = flowService.startFromPlan(user, plan.getId());
+        Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Squat", 1);
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 5, new BigDecimal("100.00"));
+
+        assertThat(ws.getCompletedAt()).isNull();
+
+        Instant before = Instant.now();
+        WorkoutSet updated = workoutSetService.updateSet(ws.getId(), user.getId(), null, null, true);
+        Instant after = Instant.now();
+
+        assertThat(updated.getCompletedAt()).isNotNull();
+        assertThat(updated.getCompletedAt()).isBetween(before, after);
+
+        WorkoutSet persisted = workoutSetRepository.findById(ws.getId()).orElseThrow();
+        assertThat(persisted.getCompletedAt()).isNotNull();
+    }
+
+    @Test
+    void updateSet_shouldClearCompletedAtWhenMarkedIncomplete() {
+        WorkoutSession session = flowService.startFromPlan(user, plan.getId());
+        Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Lunge", 1);
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 12, new BigDecimal("40.00"));
+        workoutSetService.updateSet(ws.getId(), user.getId(), null, null, true);
+
+        WorkoutSet uncompleted = workoutSetService.updateSet(ws.getId(), user.getId(), null, null, false);
+
+        assertThat(uncompleted.isCompleted()).isFalse();
+        assertThat(uncompleted.getCompletedAt()).isNull();
+
+        WorkoutSet persisted = workoutSetRepository.findById(ws.getId()).orElseThrow();
+        assertThat(persisted.getCompletedAt()).isNull();
+    }
+
+    @Test
+    void newSet_shouldHaveNullCompletedAt() {
+        WorkoutSession session = flowService.startFromPlan(user, plan.getId());
+        Exercise exercise = flowService.addExercise(session.getId(), user.getId(), "Plank", 1);
+
+        WorkoutSet ws = workoutSetService.addSet(exercise.getId(), user.getId(), 1, 60, null);
+
+        assertThat(ws.getCompletedAt()).isNull();
+        WorkoutSet persisted = workoutSetRepository.findById(ws.getId()).orElseThrow();
+        assertThat(persisted.getCompletedAt()).isNull();
     }
 
     @Test

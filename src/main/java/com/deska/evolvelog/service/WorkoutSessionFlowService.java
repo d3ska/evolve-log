@@ -66,6 +66,7 @@ public class WorkoutSessionFlowService {
                 .startedAt(now)
                 .build();
         session.activate();
+        session.setPlanVersion(plan.getCurrentVersion());
 
         List<PlannedExercise> plannedExercises = plan.getPlannedExercises();
         if (!plannedExercises.isEmpty()) {

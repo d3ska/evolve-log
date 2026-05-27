@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -33,9 +34,18 @@ public class WorkoutSet {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(name = "completed_at")
+    private Instant completedAt;
+
     public void update(Integer reps, BigDecimal weightKg, Boolean completed) {
         if (reps != null) this.reps = reps;
         if (weightKg != null) this.weightKg = weightKg;
-        if (completed != null) this.completed = completed;
+        if (completed != null) {
+            this.completed = completed;
+            if (completed && this.completedAt == null) {
+                this.completedAt = Instant.now();
+            }
+            // When unchecking, preserve completedAt so the rest timer continues from the original stamp
+        }
     }
 }

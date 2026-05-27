@@ -3,6 +3,7 @@ package com.deska.evolvelog.dto.response;
 import com.deska.evolvelog.domain.WorkoutSet;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 public record WorkoutSetDto(
@@ -11,7 +12,8 @@ public record WorkoutSetDto(
         Integer setNumber,
         Integer reps,
         BigDecimal weightKg,
-        boolean completed
+        boolean completed,
+        Instant completedAt
 ) {
     public static WorkoutSetDto from(WorkoutSet s) {
         return new WorkoutSetDto(
@@ -20,6 +22,7 @@ public record WorkoutSetDto(
                 s.getSetNumber(),
                 s.getReps(),
                 s.getWeightKg(),
-                s.isCompleted());
+                s.isCompleted(),
+                s.getCompletedAt());
     }
 }

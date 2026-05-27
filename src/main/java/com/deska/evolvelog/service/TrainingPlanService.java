@@ -4,6 +4,7 @@ import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.PlannedExercise;
 import com.deska.evolvelog.domain.TrainingBlock;
 import com.deska.evolvelog.domain.TrainingPlan;
+import com.deska.evolvelog.domain.TrainingPlanVersion;
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.domain.WorkoutSessionStatus;
@@ -12,6 +13,7 @@ import com.deska.evolvelog.dto.request.CreatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.CreateTrainingPlanRequest;
 import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
+import com.deska.evolvelog.dto.response.PlannedExerciseDto;
 import com.deska.evolvelog.dto.response.PlanSnapshotEntry;
 import com.deska.evolvelog.exception.ApiException;
 import com.deska.evolvelog.exception.ResourceNotFoundException;
@@ -19,7 +21,9 @@ import com.deska.evolvelog.repository.ExerciseDefinitionRepository;
 import com.deska.evolvelog.repository.PlannedExerciseRepository;
 import com.deska.evolvelog.repository.TrainingBlockRepository;
 import com.deska.evolvelog.repository.TrainingPlanRepository;
+import com.deska.evolvelog.repository.TrainingPlanVersionRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,7 @@ public class TrainingPlanService {
     private final ExerciseDefinitionRepository definitionRepository;
     private final TrainingBlockRepository blockRepository;
     private final WorkoutSessionRepository sessionRepository;
+    private final TrainingPlanVersionRepository versionRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -65,7 +70,9 @@ public class TrainingPlanService {
             plan.getPlannedExercises().addAll(exercises);
         }
 
-        return planRepository.save(plan);
+        TrainingPlan saved = planRepository.save(plan);
+        insertVersionRow(saved, saved.getPlannedExercises());
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -94,6 +101,8 @@ public class TrainingPlanService {
             List<PlannedExercise> newExercises = buildExercises(request.plannedExercises(), plan);
             plan.getPlannedExercises().clear();
             plan.getPlannedExercises().addAll(newExercises);
+            bumpVersion(plan, newExercises);
+            return plan;
         }
         return planRepository.save(plan);
     }
@@ -125,7 +134,11 @@ public class TrainingPlanService {
                 .exerciseDefinitionId(definitionId)
                 .build();
 
-        return exerciseRepository.save(exercise);
+        PlannedExercise saved = exerciseRepository.save(exercise);
+        List<PlannedExercise> updatedList = new ArrayList<>(plan.getPlannedExercises());
+        updatedList.add(saved);
+        bumpVersion(plan, updatedList);
+        return saved;
     }
 
     @Transactional
@@ -139,15 +152,22 @@ public class TrainingPlanService {
         exercise.applyPatch(request.name(), request.sets(), request.repsMin(), request.repsMax(),
                 request.restSeconds(), request.position(), request.notes(), definitionId);
 
-        return exerciseRepository.save(exercise);
+        PlannedExercise saved = exerciseRepository.save(exercise);
+        TrainingPlan plan = findById(planId, userId);
+        bumpVersion(plan, plan.getPlannedExercises());
+        return saved;
     }
 
     @Transactional
     public void deleteExercise(UUID planId, UUID exerciseId, UUID userId) {
-        findById(planId, userId);
+        TrainingPlan plan = findById(planId, userId);
         PlannedExercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("PlannedExercise", exerciseId));
         exerciseRepository.delete(exercise);
+        List<PlannedExercise> remaining = plan.getPlannedExercises().stream()
+                .filter(e -> !e.getId().equals(exerciseId))
+                .toList();
+        bumpVersion(plan, remaining);
     }
 
     @Transactional
@@ -183,6 +203,29 @@ public class TrainingPlanService {
 
         plan.getPlannedExercises().addAll(newExercises);
         return planRepository.save(plan);
+    }
+
+    private void bumpVersion(TrainingPlan plan, List<PlannedExercise> exercises) {
+        plan.incrementVersion();
+        planRepository.save(plan);
+        insertVersionRow(plan, exercises);
+    }
+
+    private void insertVersionRow(TrainingPlan plan, List<PlannedExercise> exercises) {
+        List<PlannedExerciseDto> snapshot = exercises.stream()
+                .map(PlannedExerciseDto::from)
+                .toList();
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(snapshot);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize plan version snapshot", e);
+        }
+        versionRepository.save(TrainingPlanVersion.builder()
+                .trainingPlanId(plan.getId())
+                .version(plan.getCurrentVersion())
+                .exercises(json)
+                .build());
     }
 
     private int[] deriveReps(Exercise exercise, Map<UUID, PlanSnapshotEntry> snapshotByPlannedId) {

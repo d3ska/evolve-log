@@ -158,6 +158,7 @@ Active changes (in-progress):
 - `openspec/changes/supplement-ux-redesign/`
 - `openspec/changes/training-block/`
 - `openspec/changes/plan-session-deviations/`
+- `openspec/changes/rest-timer-between-sets/` (implemented — ready to archive)
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
 - `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
@@ -222,6 +223,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V19 | Consolidate exercise data (migrate exercise-level reps/weight into workout_sets) |
 | V20 | Active workout module (session status lifecycle, per-set completion flag) |
 | V21 | Plan-session deviations (`exercises.planned_exercise_id`, `workout_sessions.plan_snapshot JSONB`) |
+| V22 | Rest timer (`workout_sets.completed_at TIMESTAMPTZ` nullable — stamped server-side on set completion) |
 
 **Migration rules:**
 - Never modify an existing migration. Always add a new versioned file.

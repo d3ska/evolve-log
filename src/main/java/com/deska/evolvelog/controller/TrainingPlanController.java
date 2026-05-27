@@ -8,7 +8,9 @@ import com.deska.evolvelog.dto.request.UpdatePlannedExerciseRequest;
 import com.deska.evolvelog.dto.request.UpdateTrainingPlanRequest;
 import com.deska.evolvelog.dto.response.PlannedExerciseDto;
 import com.deska.evolvelog.dto.response.TrainingPlanDto;
+import com.deska.evolvelog.dto.response.TrainingPlanVersionDto;
 import com.deska.evolvelog.service.TrainingPlanService;
+import com.deska.evolvelog.service.TrainingPlanVersionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class TrainingPlanController {
 
     private final TrainingPlanService planService;
+    private final TrainingPlanVersionService versionService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TrainingPlanDto>> create(
@@ -105,6 +108,27 @@ public class TrainingPlanController {
     ) {
         planService.deleteExercise(planId, exerciseId, user.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<ApiResponse<List<TrainingPlanVersionDto>>> getVersions(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id
+    ) {
+        List<TrainingPlanVersionDto> versions = versionService.listVersions(id, user.getId()).stream()
+                .map(TrainingPlanVersionDto::summary)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(versions));
+    }
+
+    @GetMapping("/{id}/versions/{version}")
+    public ResponseEntity<ApiResponse<TrainingPlanVersionDto>> getVersion(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @PathVariable Integer version
+    ) {
+        TrainingPlanVersionDto dto = TrainingPlanVersionDto.full(versionService.getVersion(id, version, user.getId()));
+        return ResponseEntity.ok(ApiResponse.success(dto));
     }
 
     @PostMapping("/{planId}/sync-from-session/{sessionId}")
