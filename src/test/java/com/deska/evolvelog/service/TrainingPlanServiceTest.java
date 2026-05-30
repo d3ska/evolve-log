@@ -251,7 +251,6 @@ class TrainingPlanServiceTest {
         UUID planId = plan.getId();
 
         when(planRepository.findByIdAndUserId(planId, user.getId())).thenReturn(Optional.of(plan));
-        when(exerciseRepository.countByTrainingPlanId(planId)).thenReturn(0);
         when(exerciseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
