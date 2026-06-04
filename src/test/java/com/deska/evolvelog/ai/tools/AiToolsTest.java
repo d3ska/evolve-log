@@ -1,13 +1,20 @@
 package com.deska.evolvelog.ai.tools;
 
-import com.deska.evolvelog.domain.BloodTestReport;
+import com.deska.evolvelog.domain.Exercise;
 import com.deska.evolvelog.domain.Measurement;
-import com.deska.evolvelog.domain.MonthlyExerciseAggregate;
+import com.deska.evolvelog.domain.Supplement;
+import com.deska.evolvelog.domain.SupplementPlan;
+import com.deska.evolvelog.domain.SupplementPlanEntry;
+import com.deska.evolvelog.domain.TimeSlot;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.domain.WorkoutSet;
+import com.deska.evolvelog.dto.response.DailyHealthMetricsDto;
 import com.deska.evolvelog.dto.response.ExerciseProgressPointDto;
 import com.deska.evolvelog.dto.response.PersonalRecordDto;
 import com.deska.evolvelog.repository.*;
+import com.deska.evolvelog.service.HealthMetricService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -19,9 +26,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -184,6 +193,142 @@ class AiToolsTest {
             // then — limit capped, still calls repository with userId
             verify(workoutSessionRepository).findRecentByUserIdWithExercises(eq(userId), any(Pageable.class));
         }
+
+        @Test
+        void shouldRenderLegacyPathWhenRepsAndWeightPresent() {
+            // given
+            Exercise exercise = Exercise.builder()
+                    .name("Bench Press")
+                    .sets(3)
+                    .reps(8)
+                    .weightKg(new BigDecimal("100"))
+                    .position(1)
+                    .workoutSets(new ArrayList<>())
+                    .build();
+            WorkoutSession session = WorkoutSession.builder()
+                    .date(LocalDateTime.of(2025, 3, 1, 10, 0))
+                    .exercises(new ArrayList<>(List.of(exercise)))
+                    .build();
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("Bench Press");
+            assertThat(result).contains("3×8");
+            assertThat(result).contains("100");
+        }
+
+        @Test
+        void shouldRenderPerSetPathWhenWorkoutSetsPresent() {
+            // given
+            WorkoutSet set1 = WorkoutSet.builder()
+                    .setNumber(1).reps(10).weightKg(new BigDecimal("80")).completed(true).build();
+            WorkoutSet set2 = WorkoutSet.builder()
+                    .setNumber(2).reps(8).weightKg(new BigDecimal("85")).completed(true).build();
+            Exercise exercise = Exercise.builder()
+                    .name("Squat")
+                    .sets(2)
+                    .position(1)
+                    .workoutSets(new ArrayList<>(List.of(set1, set2)))
+                    .build();
+            WorkoutSession session = WorkoutSession.builder()
+                    .date(LocalDateTime.of(2025, 3, 5, 9, 0))
+                    .exercises(new ArrayList<>(List.of(exercise)))
+                    .build();
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("Squat");
+            assertThat(result).contains("set 1:");
+            assertThat(result).contains("10 reps");
+            assertThat(result).contains("80");
+            assertThat(result).contains("set 2:");
+            assertThat(result).contains("85");
+        }
+
+        @Test
+        void shouldRenderIncompleteSetAsPlannedNotCompleted() {
+            // given
+            WorkoutSet completedSet = WorkoutSet.builder()
+                    .setNumber(1).reps(8).weightKg(new BigDecimal("100")).completed(true).build();
+            WorkoutSet incompleteSet = WorkoutSet.builder()
+                    .setNumber(2).reps(8).weightKg(new BigDecimal("100")).completed(false).build();
+            Exercise exercise = Exercise.builder()
+                    .name("Deadlift")
+                    .sets(2)
+                    .position(1)
+                    .workoutSets(new ArrayList<>(List.of(completedSet, incompleteSet)))
+                    .build();
+            WorkoutSession session = WorkoutSession.builder()
+                    .date(LocalDateTime.of(2025, 3, 10, 8, 0))
+                    .exercises(new ArrayList<>(List.of(exercise)))
+                    .build();
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("set 2: planned (not completed)");
+        }
+
+        @Test
+        void shouldAppendRpeWhenPresent() {
+            // given
+            Exercise exercise = Exercise.builder()
+                    .name("Overhead Press")
+                    .sets(3)
+                    .reps(6)
+                    .weightKg(new BigDecimal("60"))
+                    .rpe(new BigDecimal("8"))
+                    .position(1)
+                    .workoutSets(new ArrayList<>())
+                    .build();
+            WorkoutSession session = WorkoutSession.builder()
+                    .date(LocalDateTime.of(2025, 3, 15, 7, 0))
+                    .exercises(new ArrayList<>(List.of(exercise)))
+                    .build();
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("[RPE 8]");
+        }
+
+        @Test
+        void shouldRenderFallbackWhenNoRepsAndNoWorkoutSets() {
+            // given
+            Exercise exercise = Exercise.builder()
+                    .name("Pull-up")
+                    .sets(4)
+                    .position(1)
+                    .workoutSets(new ArrayList<>())
+                    .build();
+            WorkoutSession session = WorkoutSession.builder()
+                    .date(LocalDateTime.of(2025, 3, 20, 8, 0))
+                    .exercises(new ArrayList<>(List.of(exercise)))
+                    .build();
+            when(workoutSessionRepository.findRecentByUserIdWithExercises(eq(userId), any(Pageable.class)))
+                    .thenReturn(List.of(session));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("Pull-up");
+            assertThat(result).contains("no rep/weight data");
+        }
     }
 
     // --- GetBloodResultsTool ---
@@ -247,6 +392,84 @@ class AiToolsTest {
             assertThat(result).contains("82.5");
             verify(measurementRepository).findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class));
         }
+
+        @Test
+        void shouldCallDateRangeQueryWhenFromDateProvided() {
+            // given
+            Measurement m = Measurement.builder()
+                    .date(LocalDate.of(2025, 2, 1))
+                    .weightKg(new BigDecimal("83.0"))
+                    .build();
+            when(measurementRepository.findByUserIdAndDateBetweenOrderByDateAsc(
+                    eq(userId), any(LocalDate.class), any(LocalDate.class)))
+                    .thenReturn(List.of(m));
+            ObjectNode input = objectMapper.createObjectNode();
+            input.put("from_date", "2025-02-01");
+            input.put("to_date", "2025-02-28");
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then
+            assertThat(result).contains("83");
+            verify(measurementRepository).findByUserIdAndDateBetweenOrderByDateAsc(
+                    eq(userId), eq(LocalDate.of(2025, 2, 1)), eq(LocalDate.of(2025, 2, 28)));
+        }
+
+        @Test
+        void shouldIncludeDateRangeHeaderWhenFromDateProvided() {
+            // given
+            when(measurementRepository.findByUserIdAndDateBetweenOrderByDateAsc(
+                    eq(userId), any(LocalDate.class), any(LocalDate.class)))
+                    .thenReturn(List.of(
+                            Measurement.builder().date(LocalDate.of(2025, 1, 1)).weightKg(new BigDecimal("80")).build()
+                    ));
+            ObjectNode input = objectMapper.createObjectNode();
+            input.put("from_date", "2025-01-01");
+            input.put("to_date", "2025-01-31");
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then
+            assertThat(result).contains("2025-01-01");
+            assertThat(result).contains("2025-01-31");
+            assertThat(result).contains("1 entries");
+        }
+
+        @Test
+        void shouldIncludeMostRecentPhraseInLimitModeHeader() {
+            // given
+            when(measurementRepository.findByUserIdOrderByDateDesc(eq(userId), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(
+                            Measurement.builder().date(LocalDate.of(2025, 1, 10)).weightKg(new BigDecimal("81")).build()
+                    )));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("most recent");
+        }
+
+        @Test
+        void shouldFallbackToDefaultDatesWhenFromDateIsInvalid() {
+            // given
+            when(measurementRepository.findByUserIdAndDateBetweenOrderByDateAsc(
+                    eq(userId), any(LocalDate.class), any(LocalDate.class)))
+                    .thenReturn(List.of());
+            ObjectNode input = objectMapper.createObjectNode();
+            input.put("from_date", "not-a-date");
+            input.put("to_date", "also-invalid");
+
+            // when — should not throw, fallback dates used
+            String result = tool.execute(input, userId);
+
+            // then
+            assertThat(result).contains("No measurements found");
+            verify(measurementRepository).findByUserIdAndDateBetweenOrderByDateAsc(
+                    eq(userId), any(LocalDate.class), any(LocalDate.class));
+        }
     }
 
     // --- GetMonthlyAggregatesTool ---
@@ -276,6 +499,282 @@ class AiToolsTest {
             // then
             assertThat(result).contains("No monthly aggregates");
             verify(monthlyAggregateRepository).findByUserIdAndExerciseNameOrderByYearMonthDesc(userId, "Deadlift");
+        }
+    }
+
+    // --- GetSupplementInfoTool ---
+
+    @Nested
+    class GetSupplementInfoToolTest {
+
+        @Mock
+        private SupplementPlanRepository supplementPlanRepository;
+
+        private GetSupplementInfoTool tool;
+
+        @BeforeEach
+        void setUp() {
+            tool = new GetSupplementInfoTool(supplementPlanRepository);
+        }
+
+        private Supplement supplement(String name) {
+            return Supplement.builder().name(name).build();
+        }
+
+        private SupplementPlanEntry entry(Supplement sup, TimeSlot slot, String customTime,
+                                          BigDecimal dose, String unit) {
+            return SupplementPlanEntry.builder()
+                    .supplement(sup)
+                    .timeSlot(slot)
+                    .customTime(customTime)
+                    .doseAmount(dose)
+                    .doseUnit(unit)
+                    .build();
+        }
+
+        @Test
+        void shouldReturnOnlyActivePlansByDefault() {
+            // given
+            SupplementPlan active = SupplementPlan.builder().name("Morning Stack").active(true)
+                    .entries(new ArrayList<>()).build();
+            SupplementPlan inactive = SupplementPlan.builder().name("Old Plan").active(false)
+                    .entries(new ArrayList<>()).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(active, inactive));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("Morning Stack");
+            assertThat(result).doesNotContain("Old Plan");
+        }
+
+        @Test
+        void shouldShowAllPlansWhenActiveOnlyFalse() {
+            // given
+            SupplementPlan active = SupplementPlan.builder().name("Morning Stack").active(true)
+                    .entries(new ArrayList<>()).build();
+            SupplementPlan inactive = SupplementPlan.builder().name("Old Plan").active(false)
+                    .entries(new ArrayList<>()).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(active, inactive));
+            ObjectNode input = objectMapper.createObjectNode();
+            input.put("active_only", false);
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then
+            assertThat(result).contains("Morning Stack");
+            assertThat(result).contains("Old Plan");
+        }
+
+        @Test
+        void shouldLabelInactivePlanWithBracketWhenActiveOnlyFalse() {
+            // given
+            SupplementPlan inactive = SupplementPlan.builder().name("Old Plan").active(false)
+                    .entries(new ArrayList<>()).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(inactive));
+            ObjectNode input = objectMapper.createObjectNode();
+            input.put("active_only", false);
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then
+            assertThat(result).contains("[inactive]");
+        }
+
+        @Test
+        void shouldUseCustomTimeWhenTimeSlotIsCustom() {
+            // given
+            Supplement sup = supplement("Creatine");
+            SupplementPlanEntry e = entry(sup, TimeSlot.CUSTOM, "07:30", new BigDecimal("5"), "g");
+            SupplementPlan plan = SupplementPlan.builder().name("Pre-Workout").active(true)
+                    .entries(new ArrayList<>(List.of(e))).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(plan));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("07:30");
+            assertThat(result).doesNotContain("CUSTOM");
+        }
+
+        @Test
+        void shouldUseTimeSlotNameForNonCustomSlot() {
+            // given
+            Supplement sup = supplement("Vitamin D");
+            SupplementPlanEntry e = entry(sup, TimeSlot.MORNING, null, new BigDecimal("2000"), "IU");
+            SupplementPlan plan = SupplementPlan.builder().name("Daily").active(true)
+                    .entries(new ArrayList<>(List.of(e))).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(plan));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("MORNING");
+        }
+
+        @Test
+        void shouldOmitDoseFieldsWhenNull() {
+            // given
+            Supplement sup = supplement("Fish Oil");
+            SupplementPlanEntry e = entry(sup, TimeSlot.EVENING, null, null, null);
+            SupplementPlan plan = SupplementPlan.builder().name("Evening").active(true)
+                    .entries(new ArrayList<>(List.of(e))).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(plan));
+
+            // when — should not throw NullPointerException
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("Fish Oil");
+            assertThat(result).doesNotContain("null");
+        }
+
+        @Test
+        void shouldReturnSpecialMessageWhenNoActivePlansButPlansExist() {
+            // given
+            SupplementPlan inactive = SupplementPlan.builder().name("Old").active(false)
+                    .entries(new ArrayList<>()).build();
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(inactive));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("No active supplement plans found");
+            assertThat(result).contains("active_only: false");
+        }
+
+        @Test
+        void shouldReturnNoPlansMessageWhenEmpty() {
+            // given
+            when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of());
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).isEqualTo("No supplement plans found.");
+        }
+    }
+
+    // --- GetHealthMetricsTool ---
+
+    @Nested
+    class GetHealthMetricsToolTest {
+
+        @Mock
+        private HealthMetricService healthMetricService;
+
+        private GetHealthMetricsTool tool;
+
+        @BeforeEach
+        void setUp() {
+            tool = new GetHealthMetricsTool(healthMetricService);
+        }
+
+        @Test
+        void shouldApplyDefaultDateRangeWhenParamsMissing() {
+            // given
+            LocalDate today = LocalDate.now();
+            LocalDate expectedFrom = today.minusDays(30);
+            when(healthMetricService.getDailyMetrics(eq(userId), eq("withings"), any(LocalDate.class), any(LocalDate.class)))
+                    .thenReturn(List.of());
+
+            // when
+            tool.execute(emptyInput(), userId);
+
+            // then — verify called with today-30 and today
+            verify(healthMetricService).getDailyMetrics(eq(userId), eq("withings"),
+                    eq(expectedFrom), eq(today));
+        }
+
+        @Test
+        void shouldReturnNoMetricsMessageWhenServiceReturnsEmpty() {
+            // given
+            when(healthMetricService.getDailyMetrics(any(), anyString(), any(), any()))
+                    .thenReturn(List.of());
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then
+            assertThat(result).contains("No Withings health metrics found");
+            assertThat(result).contains("Sync your Withings device");
+        }
+
+        @Test
+        void shouldFilterMetricKeysWhenSpecified() {
+            // given
+            DailyHealthMetricsDto day = new DailyHealthMetricsDto(
+                    LocalDate.of(2025, 4, 1),
+                    "withings",
+                    Map.of("weight_kg", new BigDecimal("83"), "vo2_max", new BigDecimal("45"))
+            );
+            when(healthMetricService.getDailyMetrics(any(), anyString(), any(), any()))
+                    .thenReturn(List.of(day));
+            ObjectNode input = objectMapper.createObjectNode();
+            ArrayNode keys = input.putArray("metric_keys");
+            keys.add("weight_kg");
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then — weight_kg included, vo2_max excluded
+            assertThat(result).contains("83");
+            assertThat(result).doesNotContain("45");
+        }
+
+        @Test
+        void shouldRemapLabelsUsingLabelMap() {
+            // given
+            DailyHealthMetricsDto day = new DailyHealthMetricsDto(
+                    LocalDate.of(2025, 4, 2),
+                    "withings",
+                    Map.of("body_fat_percent", new BigDecimal("18.5"))
+            );
+            when(healthMetricService.getDailyMetrics(any(), anyString(), any(), any()))
+                    .thenReturn(List.of(day));
+
+            // when
+            String result = tool.execute(emptyInput(), userId);
+
+            // then — "body_fat_percent" remapped to "body_fat" in output
+            assertThat(result).contains("body_fat");
+            assertThat(result).doesNotContain("body_fat_percent");
+        }
+
+        @Test
+        void shouldSkipDaysWhereAllMetricsFilteredOut() {
+            // given
+            DailyHealthMetricsDto day = new DailyHealthMetricsDto(
+                    LocalDate.of(2025, 4, 3),
+                    "withings",
+                    Map.of("vo2_max", new BigDecimal("46"))
+            );
+            when(healthMetricService.getDailyMetrics(any(), anyString(), any(), any()))
+                    .thenReturn(List.of(day));
+            ObjectNode input = objectMapper.createObjectNode();
+            ArrayNode keys = input.putArray("metric_keys");
+            keys.add("weight_kg"); // vo2_max not in filter
+
+            // when
+            String result = tool.execute(input, userId);
+
+            // then — day is skipped, output contains only header
+            assertThat(result).doesNotContain("2025-04-03");
         }
     }
 

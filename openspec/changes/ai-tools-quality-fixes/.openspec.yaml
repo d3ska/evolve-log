@@ -1,0 +1,9 @@
+name: ai-tools-quality-fixes
+status: in-progress
+type: fix
+created: 2026-06-03
+summary: >
+  Fix two existing AI tools: (1) get_recent_workouts now renders per-set
+  detail when exercise-level aggregate fields are null (post-V17 workouts
+  with set-level tracking), and also exposes RPE. (2) get_measurements gains
+  from_date/to_date params for date-range queries alongside the existing limit.

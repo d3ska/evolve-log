@@ -2,9 +2,12 @@ package com.deska.evolvelog.ai.prompt;
 
 import com.deska.evolvelog.domain.Measurement;
 import com.deska.evolvelog.domain.WorkoutSession;
+import com.deska.evolvelog.repository.AiSettingsRepository;
 import com.deska.evolvelog.repository.BloodTestReportRepository;
 import com.deska.evolvelog.repository.FitatuFoodLogRepository;
 import com.deska.evolvelog.repository.MeasurementRepository;
+import com.deska.evolvelog.repository.SupplementPlanRepository;
+import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import com.deska.evolvelog.service.HealthMetricService;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +38,9 @@ class PromptContextBuilderTest {
     @Mock private MeasurementRepository measurementRepository;
     @Mock private FitatuFoodLogRepository fitatuFoodLogRepository;
     @Mock private HealthMetricService healthMetricService;
+    @Mock private AiSettingsRepository aiSettingsRepository;
+    @Mock private TrainingPlanRepository trainingPlanRepository;
+    @Mock private SupplementPlanRepository supplementPlanRepository;
 
     @InjectMocks
     private PromptContextBuilder contextBuilder;
@@ -57,6 +63,9 @@ class PromptContextBuilderTest {
                 .thenReturn(List.of());
         when(healthMetricService.getDailyMetrics(eq(userId), anyString(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(aiSettingsRepository.findById(userId)).thenReturn(Optional.empty());
+        when(trainingPlanRepository.findByUserIdOrderByCreatedAtAsc(userId)).thenReturn(List.of());
+        when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
     }
 
     // --- workout availability ---
@@ -75,6 +84,9 @@ class PromptContextBuilderTest {
                 .thenReturn(List.of());
         when(healthMetricService.getDailyMetrics(eq(userId), anyString(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(aiSettingsRepository.findById(userId)).thenReturn(Optional.empty());
+        when(trainingPlanRepository.findByUserIdOrderByCreatedAtAsc(userId)).thenReturn(List.of());
+        when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
 
         // when
         String context = contextBuilder.buildContext(null, userId);
@@ -113,6 +125,9 @@ class PromptContextBuilderTest {
                 .thenReturn(List.of());
         when(healthMetricService.getDailyMetrics(eq(userId), anyString(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(aiSettingsRepository.findById(userId)).thenReturn(Optional.empty());
+        when(trainingPlanRepository.findByUserIdOrderByCreatedAtAsc(userId)).thenReturn(List.of());
+        when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
 
         // when
         String context = contextBuilder.buildContext(null, userId);
@@ -147,6 +162,9 @@ class PromptContextBuilderTest {
                 .thenReturn(List.of());
         when(healthMetricService.getDailyMetrics(eq(userId), anyString(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(aiSettingsRepository.findById(userId)).thenReturn(Optional.empty());
+        when(trainingPlanRepository.findByUserIdOrderByCreatedAtAsc(userId)).thenReturn(List.of());
+        when(supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
 
         // when
         String context = contextBuilder.buildContext(null, userId);

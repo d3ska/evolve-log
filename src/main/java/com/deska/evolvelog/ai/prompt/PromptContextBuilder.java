@@ -1,12 +1,18 @@
 package com.deska.evolvelog.ai.prompt;
 
+import com.deska.evolvelog.domain.AiSettings;
 import com.deska.evolvelog.domain.FitatuFoodLog;
 import com.deska.evolvelog.domain.Measurement;
+import com.deska.evolvelog.domain.SupplementPlan;
+import com.deska.evolvelog.domain.TrainingPlan;
 import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.dto.response.DailyHealthMetricsDto;
+import com.deska.evolvelog.repository.AiSettingsRepository;
 import com.deska.evolvelog.repository.BloodTestReportRepository;
 import com.deska.evolvelog.repository.FitatuFoodLogRepository;
 import com.deska.evolvelog.repository.MeasurementRepository;
+import com.deska.evolvelog.repository.SupplementPlanRepository;
+import com.deska.evolvelog.repository.TrainingPlanRepository;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import com.deska.evolvelog.service.HealthMetricService;
 import org.springframework.data.domain.PageRequest;
@@ -28,23 +34,33 @@ public class PromptContextBuilder {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String FITATU_SOURCE = "fitatu";
+    private static final String WITHINGS_SOURCE = "withings";
 
     private final WorkoutSessionRepository workoutSessionRepository;
     private final BloodTestReportRepository bloodTestReportRepository;
     private final MeasurementRepository measurementRepository;
     private final FitatuFoodLogRepository fitatuFoodLogRepository;
     private final HealthMetricService healthMetricService;
+    private final AiSettingsRepository aiSettingsRepository;
+    private final TrainingPlanRepository trainingPlanRepository;
+    private final SupplementPlanRepository supplementPlanRepository;
 
     public PromptContextBuilder(WorkoutSessionRepository workoutSessionRepository,
                                 BloodTestReportRepository bloodTestReportRepository,
                                 MeasurementRepository measurementRepository,
                                 FitatuFoodLogRepository fitatuFoodLogRepository,
-                                HealthMetricService healthMetricService) {
+                                HealthMetricService healthMetricService,
+                                AiSettingsRepository aiSettingsRepository,
+                                TrainingPlanRepository trainingPlanRepository,
+                                SupplementPlanRepository supplementPlanRepository) {
         this.workoutSessionRepository = workoutSessionRepository;
         this.bloodTestReportRepository = bloodTestReportRepository;
         this.measurementRepository = measurementRepository;
         this.fitatuFoodLogRepository = fitatuFoodLogRepository;
         this.healthMetricService = healthMetricService;
+        this.aiSettingsRepository = aiSettingsRepository;
+        this.trainingPlanRepository = trainingPlanRepository;
+        this.supplementPlanRepository = supplementPlanRepository;
     }
 
     /**
@@ -56,7 +72,15 @@ public class PromptContextBuilder {
      */
     @Transactional(readOnly = true)
     public String buildContext(String pageContext, UUID userId) {
-        StringBuilder sb = new StringBuilder("## Available Data\n");
+        StringBuilder sb = new StringBuilder();
+
+        // Prepend goals section if the user has set any
+        aiSettingsRepository.findById(userId)
+                .map(AiSettings::getGoals)
+                .filter(g -> g != null && !g.isBlank())
+                .ifPresent(goals -> sb.append("## Your Goals\n").append(goals).append("\n\n"));
+
+        sb.append("## Available Data\n");
 
         WorkoutSession lastWorkout = workoutSessionRepository
                 .findByUserIdOrderByDateDesc(userId, PageRequest.of(0, 1))
@@ -104,6 +128,39 @@ public class PromptContextBuilder {
             } else {
                 sb.append("- **Nutrition log**: no Fitatu data imported yet\n");
             }
+        }
+
+        List<TrainingPlan> allPlans = trainingPlanRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        long activePlanCount = allPlans.stream().filter(TrainingPlan::isActive).count();
+        if (activePlanCount > 0) {
+            sb.append("- **Training plans**: ").append(activePlanCount)
+              .append(" active plan(s) — use get_training_plan to read exercises and structure\n");
+        } else if (!allPlans.isEmpty()) {
+            sb.append("- **Training plans**: ").append(allPlans.size()).append(" plan(s), none currently active\n");
+        } else {
+            sb.append("- **Training plans**: none created yet\n");
+        }
+
+        long activeSupplementPlanCount = supplementPlanRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(SupplementPlan::isActive).count();
+        if (activeSupplementPlanCount > 0) {
+            sb.append("- **Supplements**: ").append(activeSupplementPlanCount)
+              .append(" active plan(s) — use get_supplement_info to read protocol\n");
+        } else {
+            sb.append("- **Supplements**: no active supplement plan\n");
+        }
+
+        LocalDate withingsCutoff = LocalDate.now().minusDays(30);
+        List<DailyHealthMetricsDto> withingsData = healthMetricService
+                .getDailyMetrics(userId, WITHINGS_SOURCE, withingsCutoff, LocalDate.now());
+        if (!withingsData.isEmpty()) {
+            LocalDate lastWithingsDay = withingsData.getLast().date();
+            sb.append("- **Body metrics (Withings)**: ").append(withingsData.size())
+              .append(" days in last 30 days, last sync on ")
+              .append(lastWithingsDay.format(DATE_FMT))
+              .append(" — use get_health_metrics to read weight, BMR, body fat, VO2max etc.\n");
+        } else {
+            sb.append("- **Body metrics (Withings)**: no scale data synced yet\n");
         }
 
         if (pageContext != null && !pageContext.isBlank()) {

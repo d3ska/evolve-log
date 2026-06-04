@@ -1,0 +1,9 @@
+name: ai-user-goals
+status: in-progress
+type: feature
+created: 2026-06-03
+summary: >
+  Add a goals field to ai_settings so the user can persist their current fitness
+  objectives (e.g. "bulk to 90kg", "improve bench 1RM to 140kg", "cut to 12% BF").
+  Goals are injected into every AI system prompt automatically, eliminating the need
+  to re-explain intent each conversation.

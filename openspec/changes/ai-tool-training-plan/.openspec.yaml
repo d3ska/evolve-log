@@ -1,0 +1,8 @@
+name: ai-tool-training-plan
+status: in-progress
+type: feature
+created: 2026-06-03
+summary: >
+  Add get_training_plan AI tool so the AI trainer can read the user's current
+  training plans with exercises, rep ranges, and rest prescriptions, enabling
+  it to suggest informed, plan-aware changes instead of reasoning blind.

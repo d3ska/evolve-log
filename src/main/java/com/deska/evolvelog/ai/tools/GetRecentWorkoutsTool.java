@@ -1,5 +1,6 @@
 package com.deska.evolvelog.ai.tools;
 
+import com.deska.evolvelog.domain.WorkoutSet;
 import com.deska.evolvelog.domain.WorkoutSession;
 import com.deska.evolvelog.repository.WorkoutSessionRepository;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -60,11 +61,36 @@ public class GetRecentWorkoutsTool implements AiTool {
             }
             sb.append("\n");
             session.getExercises().forEach(e -> {
-                sb.append("- ").append(e.getName())
-                        .append(": ").append(e.getSets()).append("×");
-                if (e.getReps() != null) sb.append(e.getReps());
-                if (e.getWeightKg() != null) sb.append(" @ ").append(e.getWeightKg()).append(" kg");
-                sb.append("\n");
+                if (e.getReps() != null || e.getWeightKg() != null) {
+                    // Legacy aggregate path (pre-V17 or manually set aggregate)
+                    sb.append("- ").append(e.getName())
+                            .append(": ").append(e.getSets()).append("×");
+                    if (e.getReps() != null) sb.append(e.getReps());
+                    if (e.getWeightKg() != null) sb.append(" @ ").append(e.getWeightKg()).append(" kg");
+                    if (e.getRpe() != null) sb.append(" [RPE ").append(e.getRpe()).append("]");
+                    sb.append("\n");
+                } else if (!e.getWorkoutSets().isEmpty()) {
+                    // Modern per-set path (V17+): workoutSets are EAGER loaded
+                    sb.append("- ").append(e.getName()).append(" (").append(e.getSets()).append(" sets)");
+                    if (e.getRpe() != null) sb.append(" [RPE ").append(e.getRpe()).append("]");
+                    sb.append(":\n");
+                    List<WorkoutSet> sets = e.getWorkoutSets();
+                    for (WorkoutSet ws : sets) {
+                        sb.append("  set ").append(ws.getSetNumber()).append(": ");
+                        if (ws.isCompleted()) {
+                            if (ws.getReps() != null) sb.append(ws.getReps()).append(" reps");
+                            if (ws.getWeightKg() != null) sb.append(" @ ").append(ws.getWeightKg()).append(" kg");
+                        } else {
+                            sb.append("planned (not completed)");
+                        }
+                        sb.append("\n");
+                    }
+                } else {
+                    sb.append("- ").append(e.getName())
+                            .append(": ").append(e.getSets()).append(" sets (no rep/weight data)");
+                    if (e.getRpe() != null) sb.append(" [RPE ").append(e.getRpe()).append("]");
+                    sb.append("\n");
+                }
             });
         });
         return sb.toString();
