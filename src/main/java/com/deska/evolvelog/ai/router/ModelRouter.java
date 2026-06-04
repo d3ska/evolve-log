@@ -4,13 +4,17 @@ import com.deska.evolvelog.ai.provider.AiMessage;
 import com.deska.evolvelog.ai.provider.AiProvider;
 import com.deska.evolvelog.ai.provider.AiRequest;
 import com.deska.evolvelog.ai.provider.AiResponse;
+import com.deska.evolvelog.ai.provider.ModelTier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class ModelRouter {
@@ -29,36 +33,44 @@ public class ModelRouter {
             "creatinine", "audit", "hormone"
     );
 
-    private final AiProvider aiProvider;
+    private final Map<String, AiProvider> providers;
 
-    public ModelRouter(AiProvider aiProvider) {
-        this.aiProvider = aiProvider;
+    public ModelRouter(List<AiProvider> providers) {
+        this.providers = providers.stream()
+                .collect(Collectors.toMap(AiProvider::providerId, Function.identity()));
     }
 
-    /** Deterministic model selection for background scheduled tasks. */
-    public String selectModel(AiTaskType taskType) {
+    public AiProvider resolveProvider(String providerId) {
+        AiProvider provider = providers.get(providerId);
+        if (provider == null) {
+            throw new IllegalStateException("Unknown AI provider: '" + providerId + "'");
+        }
+        return provider;
+    }
+
+    /** Deterministic tier selection for background scheduled tasks. */
+    public ModelTier selectTier(AiTaskType taskType) {
         return switch (taskType) {
-            case DAILY_SUMMARY, POST_WORKOUT -> AiModelConstants.HAIKU;
-            case WEEKLY_REPORT               -> AiModelConstants.SONNET;
-            case BLOOD_ANALYSIS              -> AiModelConstants.OPUS;
-            case CHAT_CLASSIFY               -> AiModelConstants.HAIKU;
+            case DAILY_SUMMARY, POST_WORKOUT, CHAT_CLASSIFY -> ModelTier.FAST;
+            case WEEKLY_REPORT                              -> ModelTier.BALANCED;
+            case BLOOD_ANALYSIS                             -> ModelTier.SMART;
         };
     }
 
     /**
-     * Heuristic-first model selection for chat messages.
-     * Falls back to a Haiku LLM classifier when intent is ambiguous.
+     * Heuristic-first tier selection for chat messages.
+     * Falls back to an LLM classifier when intent is ambiguous.
      */
-    public String selectModelForChat(String message) {
+    public ModelTier selectTierForChat(String message, String providerId) {
         ChatIntent intent = classifyByHeuristic(message);
         if (intent != null) {
             log.debug("Chat heuristic classified '{}...' as {}", truncate(message), intent);
-            return modelForIntent(intent);
+            return tierForIntent(intent);
         }
-        // Ambiguous — call Haiku classifier
+        // Ambiguous — call the user's active provider as classifier
         log.debug("Chat heuristic inconclusive, using LLM classifier");
-        ChatIntent classified = classifyByLlm(message);
-        return modelForIntent(classified);
+        ChatIntent classified = classifyByLlm(message, resolveProvider(providerId));
+        return tierForIntent(classified);
     }
 
     ChatIntent classifyByHeuristic(String message) {
@@ -72,10 +84,11 @@ public class ModelRouter {
         return null; // ambiguous — let LLM decide
     }
 
-    private ChatIntent classifyByLlm(String message) {
+    private ChatIntent classifyByLlm(String message, AiProvider provider) {
         try {
+            String fastModelId = provider.modelIdForTier(ModelTier.FAST);
             AiRequest req = AiRequest.builder()
-                    .modelId(AiModelConstants.HAIKU)
+                    .modelId(fastModelId)
                     .systemPrompt("""
                             Classify the user's gym tracking question into exactly one category.
                             Reply with only: SIMPLE, ANALYTICAL, or MEDICAL
@@ -87,7 +100,7 @@ public class ModelRouter {
                     .temperature(0.0)
                     .build();
 
-            AiResponse response = aiProvider.complete(req);
+            AiResponse response = provider.complete(req);
             String classification = response.content().trim().toUpperCase(Locale.ROOT);
             return switch (classification) {
                 case "ANALYTICAL" -> ChatIntent.ANALYTICAL;
@@ -100,11 +113,11 @@ public class ModelRouter {
         }
     }
 
-    private String modelForIntent(ChatIntent intent) {
+    private ModelTier tierForIntent(ChatIntent intent) {
         return switch (intent) {
-            case SIMPLE     -> AiModelConstants.HAIKU;
-            case ANALYTICAL -> AiModelConstants.SONNET;
-            case MEDICAL    -> AiModelConstants.OPUS;
+            case SIMPLE     -> ModelTier.FAST;
+            case ANALYTICAL -> ModelTier.BALANCED;
+            case MEDICAL    -> ModelTier.SMART;
         };
     }
 

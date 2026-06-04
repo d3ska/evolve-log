@@ -7,4 +7,10 @@ public interface AiProvider {
     void stream(AiRequest request, AiStreamSink sink);
 
     String providerId();
+
+    void prepareContext(String apiKey);
+
+    void clearContext();
+
+    String modelIdForTier(ModelTier tier);
 }

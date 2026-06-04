@@ -4,8 +4,8 @@ import com.deska.evolvelog.ai.provider.AiMessage;
 import com.deska.evolvelog.ai.provider.AiProvider;
 import com.deska.evolvelog.ai.provider.AiRequest;
 import com.deska.evolvelog.ai.provider.AiResponse;
+import com.deska.evolvelog.ai.provider.ModelTier;
 import com.deska.evolvelog.ai.prompt.PromptLoader;
-import com.deska.evolvelog.ai.provider.anthropic.ClaudeRequestContext;
 import com.deska.evolvelog.ai.router.AiTaskType;
 import com.deska.evolvelog.ai.router.ModelRouter;
 import com.deska.evolvelog.ai.tools.AiToolRegistry;
@@ -29,7 +29,6 @@ public class AiInsightService {
 
     private static final Logger log = LoggerFactory.getLogger(AiInsightService.class);
 
-    private final AiProvider aiProvider;
     private final AiInsightRepository aiInsightRepository;
     private final AiSettingsService aiSettingsService;
     private final PromptLoader promptLoader;
@@ -37,14 +36,12 @@ public class AiInsightService {
     private final AiToolRegistry aiToolRegistry;
     private final ObjectMapper objectMapper;
 
-    public AiInsightService(AiProvider aiProvider,
-                            AiInsightRepository aiInsightRepository,
+    public AiInsightService(AiInsightRepository aiInsightRepository,
                             AiSettingsService aiSettingsService,
                             PromptLoader promptLoader,
                             ModelRouter modelRouter,
                             AiToolRegistry aiToolRegistry,
                             ObjectMapper objectMapper) {
-        this.aiProvider = aiProvider;
         this.aiInsightRepository = aiInsightRepository;
         this.aiSettingsService = aiSettingsService;
         this.promptLoader = promptLoader;
@@ -68,16 +65,20 @@ public class AiInsightService {
                 .filter(k -> !k.isBlank())
                 .orElseThrow(() -> new IllegalStateException("No API key configured"));
 
+        String providerId = aiSettingsService.getProvider(userId);
+        AiProvider provider = modelRouter.resolveProvider(providerId);
+
         try {
-            ClaudeRequestContext.setApiKey(apiKey);
-            return doGenerateInsight(userId, taskType);
+            provider.prepareContext(apiKey);
+            return doGenerateInsight(userId, taskType, provider);
         } finally {
-            ClaudeRequestContext.clear();
+            provider.clearContext();
         }
     }
 
-    private AiInsight doGenerateInsight(UUID userId, AiTaskType taskType) {
-        String modelId = modelRouter.selectModel(taskType);
+    private AiInsight doGenerateInsight(UUID userId, AiTaskType taskType, AiProvider provider) {
+        ModelTier tier = modelRouter.selectTier(taskType);
+        String modelId = provider.modelIdForTier(tier);
         String systemPrompt = promptLoader.getPrompt(taskType);
 
         // Gather data using tools relevant to this task type
@@ -90,7 +91,7 @@ public class AiInsightService {
                 .temperature(0.7)
                 .build();
 
-        AiResponse response = aiProvider.complete(request);
+        AiResponse response = provider.complete(request);
 
         LocalDate today = LocalDate.now();
         LocalDate periodStart = periodStartFor(taskType, today);

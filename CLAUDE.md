@@ -153,6 +153,10 @@ Active changes (in-progress):
 - `openspec/changes/training-volume-analytics/`
 - `openspec/changes/workout-session-flow/`
 - `openspec/changes/ai-personal-trainer/`
+- `openspec/changes/ai-tool-training-plan/` (implemented — ready to archive)
+- `openspec/changes/ai-tools-new-data-sources/` (implemented — ready to archive)
+- `openspec/changes/ai-tools-quality-fixes/` (implemented — ready to archive)
+- `openspec/changes/ai-user-goals/` (implemented — ready to archive)
 - `openspec/changes/active-workout-module/`
 - `openspec/changes/i18n-foundation/`
 - `openspec/changes/supplement-ux-redesign/`
@@ -224,6 +228,10 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | V20 | Active workout module (session status lifecycle, per-set completion flag) |
 | V21 | Plan-session deviations (`exercises.planned_exercise_id`, `workout_sessions.plan_snapshot JSONB`) |
 | V22 | Rest timer (`workout_sets.completed_at TIMESTAMPTZ` nullable — stamped server-side on set completion) |
+| V23 | Plan versioning (`training_plans.current_version`, `training_plan_versions` table, `workout_sessions.plan_version`) |
+| V24 | AI goals (`ai_settings.goals TEXT` nullable — free-text fitness goals injected into every AI system prompt) |
+| V25 | i18n foundation (`users.locale`, `exercise_definition_translations` table, PL/EN seed data) |
+| V26 | Gemini provider support (`ai_chat_history.provider VARCHAR(50)` nullable — analytics-only) |
 
 **Migration rules:**
 - Never modify an existing migration. Always add a new versioned file.
@@ -246,7 +254,7 @@ Migrations live in `src/main/resources/db/migration/` and follow strict versioni
 | Blood Tests | `blood_test_reports`, `blood_test_results` | CSV upload, per-parameter history |
 | Supplements | `supplements`, `supplement_plans`, `supplement_plan_entries`, `supplement_logs` | Three services: Catalog, Plan, Log |
 | Progress Photos | `progress_photos`, `media_attachments` | Local storage, max 200MB per request |
-| AI Trainer | `ai_settings`, `ai_insights`, `ai_chat_history`, `monthly_exercise_aggregates` | User-supplied API key, AES-256 encrypted |
+| AI Trainer | `ai_settings`, `ai_insights`, `ai_chat_history`, `monthly_exercise_aggregates` | User-supplied API key (AES-256 encrypted); `goals` TEXT field injected into every system prompt; tools: `get_recent_workouts`, `get_measurements`, `get_training_plan`, `get_supplement_info`, `get_health_metrics`, `get_nutrition_summary`, `get_blood_test_results`; providers: `ClaudeAdapter` (anthropic), `GeminiAdapter` (google); provider abstracted via `AiProvider` interface + `ModelRouter` registry; `ModelTier` enum drives model selection |
 
 ---
 
@@ -275,18 +283,23 @@ Known metric keys stored in `health_metrics` (source = `'withings'`):
 
 ---
 
-## i18n (Future Work)
+## i18n
 
-The application **does not yet support i18n**. This is planned for a future change.
+The application supports EN and PL locales (i18n-foundation change, V25 migration).
 
-When i18n is implemented, the following areas will need translations (PL/EN minimum):
-- Exercise names (`exercise_definitions.name`)
-- Muscle group names (`primary_muscle`, `secondary_muscles`)
+### How it works
+
+- `users.locale` stores the user's preferred locale (`'en'` or `'pl'`, default `'en'`).
+- `LocaleInterceptor` (HandlerInterceptor) resolves locale per request from the authenticated user, stores it in a `@RequestScope` `LocaleContextHolder` bean.
+- `ExerciseDefinitionTranslation` table (`exercise_definition_translations`) holds per-locale name overrides for system exercises. User-created exercises always use their raw name.
+- `ExerciseDefinitionService.listDefinitions()` uses a 2-query approach: load all definitions, load all translations for the current locale into a Map, merge in-memory.
+- `MuscleI18n` static utility maps raw muscle keys (e.g. `"chest"`) to locale labels (e.g. `"Klatka piersiowa"` for PL). Falls back to EN for unknown locales, returns raw key for unknown muscle keys.
+- `PUT /api/user/me/locale` — update locale preference; accepts only `"en"` or `"pl"` (validated with `@Pattern`).
+
+### Areas NOT yet translated (future work)
 - Health metric keys / labels
 - Blood test parameter labels (`blood_test_results.parameter_label`)
 - Supplement forms, time slots, and other enum-backed display strings
-
-**Do not** add translation infrastructure until we start the i18n change. When we do, prefer a dedicated `exercise_definition_translations` table (and similar per-entity translation tables) over embedding locale in the main entity, so the base schema stays clean.
 
 ---
 

@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -228,7 +229,7 @@ class WorkoutSessionFlowServiceTest {
     @Test
     void shouldSetFinishedAtAndComputeDuration() {
         // given
-        LocalDateTime startedAt = LocalDateTime.now().minusMinutes(45);
+        LocalDateTime startedAt = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(45);
         WorkoutSession session = WorkoutSession.builder()
                 .id(sessionId)
                 .user(user)

@@ -5,17 +5,18 @@ import com.deska.evolvelog.domain.AiSettings;
 public record AiSettingsView(
         boolean hasApiKey,
         String provider,
-        String apiKeyHint
+        String apiKeyHint,
+        String goals
 ) {
     public static AiSettingsView from(AiSettings settings) {
         String key = settings.getApiKeyEncrypted();
         boolean hasKey = key != null && !key.isBlank();
         String hint = hasKey ? maskKey(key) : null;
-        return new AiSettingsView(hasKey, settings.getProvider(), hint);
+        return new AiSettingsView(hasKey, settings.getProvider(), hint, settings.getGoals());
     }
 
     public static AiSettingsView empty() {
-        return new AiSettingsView(false, null, null);
+        return new AiSettingsView(false, null, null, null);
     }
 
     private static String maskKey(String key) {

@@ -4,9 +4,9 @@ import com.deska.evolvelog.ai.provider.AiMessage;
 import com.deska.evolvelog.ai.provider.AiProvider;
 import com.deska.evolvelog.ai.provider.AiRequest;
 import com.deska.evolvelog.ai.provider.AiStreamSink;
+import com.deska.evolvelog.ai.provider.ModelTier;
 import com.deska.evolvelog.ai.prompt.PromptContextBuilder;
 import com.deska.evolvelog.ai.prompt.PromptLoader;
-import com.deska.evolvelog.ai.provider.anthropic.ClaudeRequestContext;
 import com.deska.evolvelog.ai.router.ModelRouter;
 import com.deska.evolvelog.ai.tools.AiTool;
 import com.deska.evolvelog.ai.tools.AiToolRegistry;
@@ -29,7 +29,6 @@ public class AiChatService {
     private static final Logger log = LoggerFactory.getLogger(AiChatService.class);
     private static final int MAX_TOOL_CALLS = 5;
 
-    private final AiProvider aiProvider;
     private final AiChatHistoryRepository chatHistoryRepository;
     private final AiSettingsService aiSettingsService;
     private final PromptLoader promptLoader;
@@ -38,15 +37,13 @@ public class AiChatService {
     private final AiToolRegistry aiToolRegistry;
     private final ObjectMapper objectMapper;
 
-    public AiChatService(AiProvider aiProvider,
-                         AiChatHistoryRepository chatHistoryRepository,
+    public AiChatService(AiChatHistoryRepository chatHistoryRepository,
                          AiSettingsService aiSettingsService,
                          PromptLoader promptLoader,
                          PromptContextBuilder promptContextBuilder,
                          ModelRouter modelRouter,
                          AiToolRegistry aiToolRegistry,
                          ObjectMapper objectMapper) {
-        this.aiProvider = aiProvider;
         this.chatHistoryRepository = chatHistoryRepository;
         this.aiSettingsService = aiSettingsService;
         this.promptLoader = promptLoader;
@@ -67,19 +64,22 @@ public class AiChatService {
             return;
         }
 
+        String providerId = aiSettingsService.getProvider(userId);
+        AiProvider provider = modelRouter.resolveProvider(providerId);
+
         try {
-            ClaudeRequestContext.setApiKey(apiKey);
-            doChat(userId, conversationId, userMessage, pageContext, sink);
+            provider.prepareContext(apiKey);
+            doChat(userId, conversationId, userMessage, pageContext, sink, provider);
         } catch (Exception e) {
             log.error("Chat error for user {}", userId, e);
             sink.onError(new RuntimeException(userFacingError(e)));
         } finally {
-            ClaudeRequestContext.clear();
+            provider.clearContext();
         }
     }
 
     private void doChat(UUID userId, UUID conversationId, String userMessage,
-                        String pageContext, AiStreamSink sink) {
+                        String pageContext, AiStreamSink sink, AiProvider provider) {
         // Fetch last 10 messages (newest first), reverse to oldest-first for context
         List<AiChatMessage> history = chatHistoryRepository
                 .findTop10ByUserIdAndConversationIdOrderByCreatedAtDesc(userId, conversationId);
@@ -102,7 +102,8 @@ public class AiChatService {
         String systemPrompt = promptLoader.getChatPrompt()
                 .replace("{{context}}", contextData != null ? contextData : "No additional context available.");
 
-        String modelId = modelRouter.selectModelForChat(userMessage);
+        ModelTier tier = modelRouter.selectTierForChat(userMessage, provider.providerId());
+        String modelId = provider.modelIdForTier(tier);
 
         // Tool call loop — streams until no tools are used or limit is reached
         StringBuilder assistantContent = new StringBuilder();
@@ -120,7 +121,7 @@ public class AiChatService {
             List<ToolCall> toolCalls = new ArrayList<>();
             CollectingStreamSink collecting = new CollectingStreamSink(sink, toolCalls, assistantContent);
 
-            aiProvider.stream(request, collecting);
+            provider.stream(request, collecting);
 
             if (toolCalls.isEmpty() || toolCallCount >= MAX_TOOL_CALLS) {
                 break;
@@ -167,6 +168,7 @@ public class AiChatService {
                     .conversationId(conversationId)
                     .role("assistant")
                     .content(finalContent)
+                    .provider(provider.providerId())
                     .build());
         }
 

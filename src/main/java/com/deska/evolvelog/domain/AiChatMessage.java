@@ -34,6 +34,10 @@ public class AiChatMessage {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    /** Analytics-only: which provider generated this message. Null for rows created before V26. */
+    @Column(name = "provider", length = 50)
+    private String provider;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

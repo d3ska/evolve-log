@@ -5,6 +5,7 @@ import com.deska.evolvelog.ai.provider.AiProvider;
 import com.deska.evolvelog.ai.provider.AiRequest;
 import com.deska.evolvelog.ai.provider.AiResponse;
 import com.deska.evolvelog.ai.provider.AiStreamSink;
+import com.deska.evolvelog.ai.provider.ModelTier;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,25 @@ public class ClaudeAdapter implements AiProvider {
     @Override
     public String providerId() {
         return "anthropic";
+    }
+
+    @Override
+    public void prepareContext(String apiKey) {
+        ClaudeRequestContext.setApiKey(apiKey);
+    }
+
+    @Override
+    public void clearContext() {
+        ClaudeRequestContext.clear();
+    }
+
+    @Override
+    public String modelIdForTier(ModelTier tier) {
+        return switch (tier) {
+            case FAST -> ClaudeModelConstants.FAST;
+            case BALANCED -> ClaudeModelConstants.BALANCED;
+            case SMART -> ClaudeModelConstants.SMART;
+        };
     }
 
     @Override

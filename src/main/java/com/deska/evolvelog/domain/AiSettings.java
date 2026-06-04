@@ -33,6 +33,9 @@ public class AiSettings {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String goals;
+
     @PrePersist
     protected void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -48,5 +51,9 @@ public class AiSettings {
     public void updateKey(String provider, String apiKeyEncrypted) {
         this.provider = provider;
         this.apiKeyEncrypted = apiKeyEncrypted;
+    }
+
+    public void updateGoals(String goals) {
+        this.goals = goals;
     }
 }
