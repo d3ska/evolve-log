@@ -7,6 +7,7 @@ public record ExerciseDefinitionDto(
         UUID id,
         String name,
         String primaryMuscle,
+        String primaryMuscleLabel,
         List<String> secondaryMuscles,
         String equipment,
         boolean isSystem

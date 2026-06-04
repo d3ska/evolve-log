@@ -45,6 +45,10 @@ public class User implements UserDetails, Serializable {
     @Builder.Default
     private UnitSystem unitSystem = UnitSystem.METRIC;
 
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String locale = "en";
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -84,5 +88,9 @@ public class User implements UserDetails, Serializable {
 
     public void updatePreferences(UnitSystem unitSystem) {
         this.unitSystem = unitSystem;
+    }
+
+    public void updateLocale(String locale) {
+        this.locale = locale;
     }
 }

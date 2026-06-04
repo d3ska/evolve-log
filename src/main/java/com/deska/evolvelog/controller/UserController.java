@@ -2,6 +2,7 @@ package com.deska.evolvelog.controller;
 
 import com.deska.evolvelog.domain.User;
 import com.deska.evolvelog.dto.ApiResponse;
+import com.deska.evolvelog.dto.request.UpdateLocaleRequest;
 import com.deska.evolvelog.dto.request.UpdateUserPreferencesRequest;
 import com.deska.evolvelog.dto.response.UserDto;
 import com.deska.evolvelog.service.UserService;
@@ -24,6 +25,15 @@ public class UserController {
             @Valid @RequestBody UpdateUserPreferencesRequest request
     ) {
         User updated = userService.updatePreferences(user, request);
+        return ResponseEntity.ok(ApiResponse.success(UserDto.from(updated)));
+    }
+
+    @PutMapping("/me/locale")
+    public ResponseEntity<ApiResponse<UserDto>> updateLocale(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateLocaleRequest request
+    ) {
+        User updated = userService.updateLocale(user, request.locale());
         return ResponseEntity.ok(ApiResponse.success(UserDto.from(updated)));
     }
 }

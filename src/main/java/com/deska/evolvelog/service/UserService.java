@@ -18,4 +18,10 @@ public class UserService {
         user.updatePreferences(request.unitSystem());
         return userRepository.save(user);
     }
+
+    @Transactional
+    public User updateLocale(User user, String locale) {
+        user.updateLocale(locale);
+        return userRepository.save(user);
+    }
 }
