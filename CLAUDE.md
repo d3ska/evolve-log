@@ -163,6 +163,7 @@ Active changes (in-progress):
 - `openspec/changes/training-block/`
 - `openspec/changes/plan-session-deviations/`
 - `openspec/changes/rest-timer-between-sets/` (implemented — ready to archive)
+- `openspec/changes/training-block-progress-view/`
 Archived changes (reference):
 - `openspec/changes/archive/2026-04-26-evolvelog-deep-review/`
 - `openspec/changes/archive/2026-04-29-manual-workout-analytics-fix/`
