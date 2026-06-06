@@ -25,7 +25,7 @@ CREATE INDEX idx_exercise_def_translations_locale
 -- 3. Seed EN translations from existing name / description
 -- ============================================================
 INSERT INTO exercise_definition_translations (exercise_definition_id, locale, name, description)
-SELECT id, 'en', name, description
+SELECT id, 'en', name, NULL
 FROM exercise_definitions
 WHERE is_system = true;
 
